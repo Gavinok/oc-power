@@ -1,0 +1,100 @@
+#+TITLE: BLE Cycling Power Meter
+#+AUTHOR:
+#+OPTIONS: toc:2
+
+* Overview
+
+A BLE peripheral for ESP32 that implements the standard Bluetooth Cycling Power Service (UUID 0x1818). It advertises as a cycling power sensor and can connect to bike computers, smartwatches (Garmin, Wahoo, etc.), and fitness apps.
+
+The power output follows a sine wave pattern to simulate varying effort levels, making it useful for testing and development of cycling applications.
+
+** Features
+
+- Cycling Power Service (0x1818) compliant
+- Power Measurement notifications at 4 Hz
+- Simulated crank revolution data
+- Configurable power range and cycle period
+
+** BLE Characteristics
+
+| Characteristic          | UUID   | Properties | Description                          |
+|-------------------------+--------+------------+--------------------------------------|
+| Power Measurement       | 0x2A63 | Notify     | Instantaneous power + crank data     |
+| Power Feature           | 0x2A65 | Read       | Supported features bitmask           |
+| Sensor Location         | 0x2A5D | Read       | Left Crank (0x0D)                    |
+
+* Project Structure
+
+#+BEGIN_EXAMPLE
+power_meter/
+├── CMakeLists.txt          # Project-level CMake configuration
+├── sdkconfig.defaults      # NimBLE stack configuration
+├── .clangd                 # Clangd LSP configuration
+└── main/
+    ├── CMakeLists.txt      # Component registration
+    ├── main.c              # Application entry, BLE init, power update task
+    ├── gap.c               # GAP advertising and connection handling
+    ├── gap.h
+    ├── ble_power_service.c # GATT Cycling Power Service implementation
+    └── ble_power_service.h
+#+END_EXAMPLE
+
+** File Descriptions
+
+- =main.c= :: Application entry point. Initializes NVS, NimBLE stack, GAP, and GATT services. Runs a FreeRTOS task that sends power notifications using a sine wave pattern.
+
+- =gap.c/h= :: Handles BLE advertising with the Cycling Power Service UUID and manages connection/disconnection events.
+
+- =ble_power_service.c/h= :: Implements the Cycling Power Service with three characteristics: Power Measurement (notify), Power Feature (read), and Sensor Location (read).
+
+* Configuration
+
+Power simulation parameters in =main.c=:
+
+#+BEGIN_SRC c
+#define POWER_BASE_WATTS        200     /* Center power value */
+#define POWER_AMPLITUDE_WATTS   50      /* +/- variation (150W to 250W) */
+#define POWER_CYCLE_SECONDS     10      /* Full sine wave period */
+#+END_SRC
+
+Device name in =gap.h=:
+
+#+BEGIN_SRC c
+#define DEVICE_NAME "ESP32 Power"
+#+END_SRC
+
+* Building and Flashing
+
+Requires ESP-IDF toolchain with =IDF_PATH= set.
+
+#+BEGIN_SRC shell
+# Build
+idf.py build
+
+# Flash (replace /dev/ttyUSB0 with your port)
+idf.py -p /dev/ttyUSB0 flash
+
+# Monitor serial output
+idf.py -p /dev/ttyUSB0 monitor
+
+# Build, flash, and monitor
+idf.py -p /dev/ttyUSB0 flash monitor
+#+END_SRC
+
+To find your serial port:
+
+#+BEGIN_SRC shell
+ls /dev/tty{USB,ACM}* 2>/dev/null
+#+END_SRC
+
+* Verification
+
+1. Flash to ESP32 and open serial monitor
+2. Use a BLE scanner app (nRF Connect) to find "ESP32 Power"
+3. Verify Cycling Power Service (0x1818) is advertised
+4. Subscribe to Power Measurement characteristic to see values
+5. Pair with a Garmin watch or bike computer as a power sensor
+
+* Clangd Support
+
+The project includes a =.clangd= file that points to the build directory for code completion. Run =idf.py build= at least once to generate =compile_commands.json=.

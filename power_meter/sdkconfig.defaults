@@ -1,0 +1,8 @@
+# Enable Bluetooth
+CONFIG_BT_ENABLED=y
+
+# Use NimBLE instead of Bluedroid
+CONFIG_BT_NIMBLE_ENABLED=y
+
+# Disable BLE 5.0 features (not needed for power meter)
+CONFIG_BT_NIMBLE_50_FEATURE_SUPPORT=n
