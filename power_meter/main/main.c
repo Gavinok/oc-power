@@ -23,6 +23,18 @@
 #include "gap.h"
 #include "ble_power_service.h"
 
+/* Set to 1 to run MPU6050 smoke test instead of BLE power meter */
+#define MPU6050_SMOKE_TEST 1
+
+#if MPU6050_SMOKE_TEST
+#include "driver/i2c.h"
+#include "mpu6050.h"
+#define I2C_SDA_PIN     21
+#define I2C_SCL_PIN     22
+#define I2C_PORT        I2C_NUM_0
+#define I2C_FREQ_HZ     400000
+#endif
+
 #define TAG "POWER_METER"
 
 /* Configuration */
@@ -100,10 +112,59 @@ static void power_update_task(void *param) {
     vTaskDelete(NULL);
 }
 
+#if MPU6050_SMOKE_TEST
+static void mpu6050_smoke_test_task(void *param) {
+    mpu6050_handle_t mpu = (mpu6050_handle_t)param;
+    uint8_t device_id = 0;
+
+    if (mpu6050_get_deviceid(mpu, &device_id) == ESP_OK) {
+        ESP_LOGI(TAG, "MPU6050 device ID: 0x%02x (expect 0x68)", device_id);
+    } else {
+        ESP_LOGE(TAG, "Failed to read device ID — check wiring");
+    }
+
+    while (1) {
+        mpu6050_acce_value_t acce;
+        if (mpu6050_get_acce(mpu, &acce) == ESP_OK) {
+            ESP_LOGI(TAG, "Accel  x=%6.3f  y=%6.3f  z=%6.3f  g", acce.acce_x, acce.acce_y, acce.acce_z);
+        } else {
+            ESP_LOGE(TAG, "Failed to read accelerometer");
+        }
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+#endif
+
 void app_main(void) {
-    int rc = 0;
     esp_err_t ret;
 
+#if MPU6050_SMOKE_TEST
+    ESP_LOGI(TAG, "MPU6050 smoke test — BLE disabled");
+
+    i2c_config_t conf = {
+        .mode             = I2C_MODE_MASTER,
+        .sda_io_num       = I2C_SDA_PIN,
+        .scl_io_num       = I2C_SCL_PIN,
+        .sda_pullup_en    = GPIO_PULLUP_ENABLE,
+        .scl_pullup_en    = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C_FREQ_HZ,
+    };
+    ESP_ERROR_CHECK(i2c_param_config(I2C_PORT, &conf));
+    ESP_ERROR_CHECK(i2c_driver_install(I2C_PORT, I2C_MODE_MASTER, 0, 0, 0));
+
+    mpu6050_handle_t mpu = mpu6050_create(I2C_PORT, MPU6050_I2C_ADDRESS);
+    if (mpu == NULL) {
+        ESP_LOGE(TAG, "mpu6050_create failed — check I2C wiring");
+        return;
+    }
+    ESP_ERROR_CHECK(mpu6050_wake_up(mpu));
+    ESP_ERROR_CHECK(mpu6050_config(mpu, ACCE_FS_4G, GYRO_FS_500DPS));
+
+    xTaskCreate(mpu6050_smoke_test_task, "MPU6050 Test", 2 * 1024, mpu, 5, NULL);
+    return;
+#endif
+
+    int rc = 0;
     ESP_LOGI(TAG, "Initializing BLE Cycling Power Meter");
 
     /* Initialize NVS flash (required by BLE stack) */
