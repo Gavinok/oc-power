@@ -68,17 +68,20 @@ Device name in =gap.h=:
 Requires ESP-IDF toolchain with =IDF_PATH= set.
 
 #+BEGIN_SRC shell
+# Open The Main Project
+cd power_meter
+
 # Build
 idf.py build
 
 # Flash (replace /dev/ttyUSB0 with your port)
-idf.py -p /dev/ttyUSB0 flash
+idf.py flash
 
 # Monitor serial output
-idf.py -p /dev/ttyUSB0 monitor
+idf.py monitor
 
 # Build, flash, and monitor
-idf.py -p /dev/ttyUSB0 flash monitor
+idf.py flash monitor
 #+END_SRC
 
 To find your serial port:
@@ -93,7 +96,7 @@ ls /dev/tty{USB,ACM}* 2>/dev/null
 2. Use a BLE scanner app (nRF Connect) to find "ESP32 Power"
 3. Verify Cycling Power Service (0x1818) is advertised
 4. Subscribe to Power Measurement characteristic to see values
-5. Pair with a Garmin watch or bike computer as a power sensor
+5. Pairing_Complete with a Garmin watch or bike computer as a power sensor
 
 * Clangd Support
 
