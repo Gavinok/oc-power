@@ -33,4 +33,8 @@ void power_service_subscribe_cb(struct ble_gap_event *event);
 void gatt_svr_register_cb(struct ble_gatt_register_ctxt *ctxt, void *arg);
 void send_power_notification(int16_t power_watts);
 
+/* Update crank revolution data from real stroke detection.
+ * event_time_us: stroke timestamp from esp_timer_get_time() */
+void power_service_update_crank(int64_t event_time_us);
+
 #endif // BLE_POWER_SERVICE_H

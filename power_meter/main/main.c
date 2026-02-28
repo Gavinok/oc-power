@@ -23,40 +23,35 @@
 #include "gap.h"
 #include "ble_power_service.h"
 
-/* Set to 1 to run MPU6050 smoke test instead of BLE power meter */
-#define MPU6050_SMOKE_TEST 1
+/* 0 = sine wave demo, 1 = IMU-based stroke detection */
+#define USE_IMU_POWER 1
 
-#if MPU6050_SMOKE_TEST
+#if USE_IMU_POWER
 #include "driver/i2c.h"
 #include "mpu6050.h"
+#include "stroke_detector.h"
+#include "imu_power.h"
 #define I2C_SDA_PIN     21
 #define I2C_SCL_PIN     22
 #define I2C_PORT        I2C_NUM_0
 #define I2C_FREQ_HZ     400000
+#define IMU_SAMPLE_MS   50   /* 20 Hz IMU sampling */
 #endif
 
-#define TAG "POWER_METER"
-
-/* Configuration */
-#define POWER_UPDATE_RATE_HZ    4       /* 4 Hz update rate (250ms) */
+/* BLE notification rate */
+#define POWER_UPDATE_RATE_HZ    10
 #define POWER_UPDATE_PERIOD_MS  (1000 / POWER_UPDATE_RATE_HZ)
 
-/* Sine wave power simulation */
-#define POWER_BASE_WATTS        200     /* Center power value */
-#define POWER_AMPLITUDE_WATTS   50      /* +/- variation (150W to 250W) */
-#define POWER_CYCLE_SECONDS     10      /* Full sine wave period */
+/* Sine wave demo config */
+#define POWER_BASE_WATTS        200
+#define POWER_AMPLITUDE_WATTS   50
+#define POWER_CYCLE_SECONDS     10
+
+#define TAG "POWER_METER"
 
 /* Library function declarations */
 void ble_store_config_init(void);
 
-/* Private function declarations */
-static void on_stack_reset(int reason);
-static void on_stack_sync(void);
-static void nimble_host_config_init(void);
-static void nimble_host_task(void *param);
-static void power_update_task(void *param);
-
-/* Stack callbacks */
 static void on_stack_reset(int reason) {
     ESP_LOGI(TAG, "NimBLE stack reset, reason: %d", reason);
 }
@@ -67,80 +62,120 @@ static void on_stack_sync(void) {
 }
 
 static void nimble_host_config_init(void) {
-    /* Set host callbacks */
     ble_hs_cfg.reset_cb = on_stack_reset;
     ble_hs_cfg.sync_cb = on_stack_sync;
     ble_hs_cfg.gatts_register_cb = gatt_svr_register_cb;
     ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
-
-    /* Store host configuration */
     ble_store_config_init();
 }
 
 static void nimble_host_task(void *param) {
     ESP_LOGI(TAG, "NimBLE host task started");
-
-    /* This function won't return until nimble_port_stop() is called */
     nimble_port_run();
-
-    /* Clean up */
     vTaskDelete(NULL);
 }
 
+#if USE_IMU_POWER
+
 static void power_update_task(void *param) {
-    ESP_LOGI(TAG, "Power update task started (%d Hz)", POWER_UPDATE_RATE_HZ);
-    ESP_LOGI(TAG, "Power range: %d-%d W, cycle: %d sec",
-             POWER_BASE_WATTS - POWER_AMPLITUDE_WATTS,
-             POWER_BASE_WATTS + POWER_AMPLITUDE_WATTS,
-             POWER_CYCLE_SECONDS);
+    mpu6050_handle_t mpu = (mpu6050_handle_t)param;
+    stroke_state_t stroke = {0};
+    imu_calibration_t cal = {0};
+    imu_power_state_t power = {0};
+
+    stroke_detector_init(&stroke);
+    imu_power_init(&power, TOTAL_MASS_KG);
+
+    /* Run gravity calibration — device must be still for ~2 seconds */
+    imu_calibrate(&cal, mpu);
+
+    int ble_notify_counter = 0;
+    const int ble_notify_every = POWER_UPDATE_PERIOD_MS / IMU_SAMPLE_MS;
+    int64_t last_sample_us = esp_timer_get_time();
+    float last_power_w = 0.0f;
+
+    ESP_LOGI(TAG, "IMU power task running (20Hz IMU, 10Hz BLE)");
 
     while (1) {
-        /* Get current time in seconds */
-        double time_sec = esp_timer_get_time() / 1000000.0;
+        mpu6050_acce_value_t acce;
+        if (mpu6050_get_acce(mpu, &acce) == ESP_OK) {
+            int64_t now = esp_timer_get_time();
+            float dt_s = (now - last_sample_us) / 1e6f;
+            last_sample_us = now;
 
-        /* Calculate power using sine wave */
+            /* Compute acceleration magnitude for stroke detection */
+            float mag = sqrtf(acce.acce_x * acce.acce_x +
+                              acce.acce_y * acce.acce_y +
+                              acce.acce_z * acce.acce_z);
+            float dynamic_g = fabsf(mag - 1.0f);
+
+            /* Update stroke detector */
+            int stroke_done = stroke_detector_update(&stroke, dynamic_g, now);
+            if (stroke_done) {
+                /* Real stroke completed — update cadence on the watch */
+                power_service_update_crank(now);
+            }
+
+            /* Update power estimator with signed forward acceleration */
+            float inst_power_w = 0.0f;
+            imu_power_update(&power, &cal, &acce, stroke.phase, dt_s, &inst_power_w);
+
+            /* Hold the last non-zero power reading to send over BLE */
+            if (inst_power_w > 0.0f) {
+                last_power_w = inst_power_w;
+            }
+        }
+
+        /* Send BLE notification at 10 Hz */
+        if (++ble_notify_counter >= ble_notify_every) {
+            ble_notify_counter = 0;
+            /* Use stroke average power between strokes for a stable reading */
+            float send_watts = (stroke.phase == STROKE_PHASE_PULL)
+                               ? last_power_w
+                               : power.avg_stroke_power_w;
+            send_power_notification((int16_t)send_watts);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(IMU_SAMPLE_MS));
+    }
+
+    vTaskDelete(NULL);
+}
+
+#else
+
+static void power_update_task(void *param) {
+    ESP_LOGI(TAG, "Sine wave demo started (%d Hz)", POWER_UPDATE_RATE_HZ);
+
+    while (1) {
+        double time_sec = esp_timer_get_time() / 1000000.0;
         double angle = (2.0 * M_PI * time_sec) / POWER_CYCLE_SECONDS;
         int16_t power = POWER_BASE_WATTS + (int16_t)(POWER_AMPLITUDE_WATTS * sin(angle));
-
-        /* Send power notification if connected and subscribed */
         send_power_notification(power);
-
-        /* Wait for next update period */
         vTaskDelay(pdMS_TO_TICKS(POWER_UPDATE_PERIOD_MS));
     }
 
     vTaskDelete(NULL);
 }
 
-#if MPU6050_SMOKE_TEST
-static void mpu6050_smoke_test_task(void *param) {
-    mpu6050_handle_t mpu = (mpu6050_handle_t)param;
-    uint8_t device_id = 0;
-
-    if (mpu6050_get_deviceid(mpu, &device_id) == ESP_OK) {
-        ESP_LOGI(TAG, "MPU6050 device ID: 0x%02x (expect 0x68)", device_id);
-    } else {
-        ESP_LOGE(TAG, "Failed to read device ID — check wiring");
-    }
-
-    while (1) {
-        mpu6050_acce_value_t acce;
-        if (mpu6050_get_acce(mpu, &acce) == ESP_OK) {
-            ESP_LOGI(TAG, "Accel  x=%6.3f  y=%6.3f  z=%6.3f  g", acce.acce_x, acce.acce_y, acce.acce_z);
-        } else {
-            ESP_LOGE(TAG, "Failed to read accelerometer");
-        }
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
-}
-#endif
+#endif /* USE_IMU_POWER */
 
 void app_main(void) {
     esp_err_t ret;
+    int rc = 0;
 
-#if MPU6050_SMOKE_TEST
-    ESP_LOGI(TAG, "MPU6050 smoke test — BLE disabled");
+    ESP_LOGI(TAG, "Initializing BLE Cycling Power Meter (USE_IMU_POWER=%d)", USE_IMU_POWER);
 
+    /* Initialize NVS flash (required by BLE stack) */
+    ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+
+#if USE_IMU_POWER
+    /* Initialize I2C and MPU6050 */
     i2c_config_t conf = {
         .mode             = I2C_MODE_MASTER,
         .sda_io_num       = I2C_SDA_PIN,
@@ -160,54 +195,51 @@ void app_main(void) {
     ESP_ERROR_CHECK(mpu6050_wake_up(mpu));
     ESP_ERROR_CHECK(mpu6050_config(mpu, ACCE_FS_4G, GYRO_FS_500DPS));
 
-    xTaskCreate(mpu6050_smoke_test_task, "MPU6050 Test", 2 * 1024, mpu, 5, NULL);
-    return;
+    /* Configure MPU6050 digital low-pass filter (DLPF) to 10 Hz cutoff.
+     * Register 0x1A (CONFIG), bits 2:0 = 5 → 10 Hz accel/gyro bandwidth.
+     *
+     * At our 20 Hz sampling rate, a 10 Hz cutoff means the filter "memory"
+     * spans ~1/10Hz = 100ms = 2 samples. A spike must persist for ~2
+     * consecutive samples before it passes through fully. Real paddle strokes
+     * build over 500ms+ so they pass cleanly; single-sample vibration spikes
+     * get attenuated. Stroke dynamics (~1 Hz) are well below the cutoff. */
+    uint8_t dlpf_cfg = 0x05;
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (MPU6050_I2C_ADDRESS << 1) | I2C_MASTER_WRITE, true);
+    i2c_master_write_byte(cmd, 0x1A, true);  /* CONFIG register */
+    i2c_master_write_byte(cmd, dlpf_cfg, true);
+    i2c_master_stop(cmd);
+    esp_err_t dlpf_ret = i2c_master_cmd_begin(I2C_PORT, cmd, pdMS_TO_TICKS(100));
+    i2c_cmd_link_delete(cmd);
+    if (dlpf_ret == ESP_OK) {
+        ESP_LOGI(TAG, "MPU6050 DLPF set to 10 Hz");
+    } else {
+        ESP_LOGW(TAG, "MPU6050 DLPF config failed (non-critical)");
+    }
+
+    ESP_LOGI(TAG, "MPU6050 initialized");
 #endif
-
-    int rc = 0;
-    ESP_LOGI(TAG, "Initializing BLE Cycling Power Meter");
-
-    /* Initialize NVS flash (required by BLE stack) */
-    ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
-        ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize NVS flash, error: %d", ret);
-        return;
-    }
 
     /* Initialize NimBLE stack */
     ret = nimble_port_init();
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize NimBLE stack, error: %d", ret);
-        return;
-    }
+    ESP_ERROR_CHECK(ret);
 
-    /* Initialize GAP service */
     rc = gap_init();
-    if (rc != 0) {
-        ESP_LOGE(TAG, "Failed to initialize GAP service, error: %d", rc);
-        return;
-    }
+    if (rc != 0) { ESP_LOGE(TAG, "gap_init failed: %d", rc); return; }
 
-    /* Initialize Cycling Power Service */
     rc = power_service_init();
-    if (rc != 0) {
-        ESP_LOGE(TAG, "Failed to initialize Power Service, error: %d", rc);
-        return;
-    }
+    if (rc != 0) { ESP_LOGE(TAG, "power_service_init failed: %d", rc); return; }
 
-    /* Configure NimBLE host */
     nimble_host_config_init();
 
-    /* Start NimBLE host task */
     xTaskCreate(nimble_host_task, "NimBLE Host", 4 * 1024, NULL, 5, NULL);
 
-    /* Start power update task */
+#if USE_IMU_POWER
+    xTaskCreate(power_update_task, "Power Update", 4 * 1024, mpu, 5, NULL);
+#else
     xTaskCreate(power_update_task, "Power Update", 2 * 1024, NULL, 5, NULL);
+#endif
 
-    ESP_LOGI(TAG, "BLE Cycling Power Meter initialized successfully");
+    ESP_LOGI(TAG, "BLE Cycling Power Meter running");
 }

@@ -251,11 +251,6 @@ void send_power_notification(int16_t power_watts) {
   struct os_mbuf *om;
   int rc;
 
-  /* Update crank revolution data (simulate 80 RPM = ~1.33 revs/sec at 4Hz
-   * update) */
-  cumulative_crank_revs += 1;   /* Simplified: 1 rev per update */
-  last_crank_event_time += 256; /* 1/4 second in 1/1024 sec units */
-
   /* Build measurement packet */
   measurement.flags = CPM_FLAG_CRANK_REV_DATA_PRESENT;
   measurement.instantaneous_power = power_watts;
@@ -278,6 +273,17 @@ void send_power_notification(int16_t power_watts) {
     ESP_LOGD(TAG, "sent power: %d W, revs: %d, time: %d", power_watts,
              cumulative_crank_revs, last_crank_event_time);
   }
+}
+
+/**
+ * Update crank revolution data from a real detected stroke.
+ * Call this once per detected stroke with the stroke timestamp.
+ */
+void power_service_update_crank(int64_t event_time_us) {
+    cumulative_crank_revs++;
+    /* Convert microseconds to 1/1024 second units (wraps naturally as uint16) */
+    last_crank_event_time = (uint16_t)(event_time_us * 1024 / 1000000);
+    ESP_LOGD(TAG, "crank update: revs=%d time=%d", cumulative_crank_revs, last_crank_event_time);
 }
 
 /**
