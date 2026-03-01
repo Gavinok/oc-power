@@ -4,6 +4,12 @@
 
 #define TAG "STROKE"
 
+static float s_catch_g    = STROKE_CATCH_THRESHOLD_G;
+static float s_recovery_g = STROKE_RECOVERY_THRESHOLD_G;
+
+void stroke_detector_set_catch_threshold(float catch_g)      { s_catch_g    = catch_g;    }
+void stroke_detector_set_recovery_threshold(float recovery_g) { s_recovery_g = recovery_g; }
+
 void stroke_detector_init(stroke_state_t *state) {
     memset(state, 0, sizeof(*state));
     state->phase = STROKE_PHASE_RECOVERY;
@@ -15,7 +21,7 @@ int stroke_detector_update(stroke_state_t *state, float accel_g, int64_t ts_us) 
     switch (state->phase) {
 
     case STROKE_PHASE_RECOVERY:
-        if (accel_g > STROKE_CATCH_THRESHOLD_G) {
+        if (accel_g > s_catch_g) {
             state->phase = STROKE_PHASE_CATCH;
             state->stroke_start_us = ts_us;
             state->peak_accel_g = accel_g;
@@ -28,7 +34,7 @@ int stroke_detector_update(stroke_state_t *state, float accel_g, int64_t ts_us) 
             state->peak_accel_g = accel_g;
             state->phase = STROKE_PHASE_PULL;
             ESP_LOGD(TAG, "PULL peak %.3f g", accel_g);
-        } else if (accel_g < STROKE_RECOVERY_THRESHOLD_G) {
+        } else if (accel_g < s_recovery_g) {
             /* Spike too brief, treat as noise, return to recovery */
             state->phase = STROKE_PHASE_RECOVERY;
         }
@@ -38,7 +44,7 @@ int stroke_detector_update(stroke_state_t *state, float accel_g, int64_t ts_us) 
         if (accel_g > state->peak_accel_g) {
             state->peak_accel_g = accel_g;
         }
-        if (accel_g < STROKE_RECOVERY_THRESHOLD_G) {
+        if (accel_g < s_recovery_g) {
             state->phase = STROKE_PHASE_RELEASE;
             ESP_LOGD(TAG, "RELEASE");
         }
@@ -47,7 +53,7 @@ int stroke_detector_update(stroke_state_t *state, float accel_g, int64_t ts_us) 
     case STROKE_PHASE_RELEASE: {
         int64_t duration_us = ts_us - state->stroke_start_us;
 
-        if (accel_g < STROKE_RECOVERY_THRESHOLD_G) {
+        if (accel_g < s_recovery_g) {
             /* Confirm stroke only if duration is plausible */
             if (duration_us >= STROKE_MIN_DURATION_US &&
                 duration_us <= STROKE_MAX_DURATION_US) {

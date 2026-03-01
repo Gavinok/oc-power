@@ -93,6 +93,36 @@ static void on_ws_command(const char *cmd)
         imu_power_set_verbose(false);
         wifi_log_server_set_status("!verbose:off");
         ESP_LOGI(TAG, "Verbose IMU logging OFF");
+    } else if (strncmp(cmd, "set:mass:", 9) == 0) {
+        float kg;
+        if (sscanf(cmd + 9, "%f", &kg) == 1 && kg > 0.0f) {
+            imu_power_set_mass(kg);
+            ESP_LOGI(TAG, "Mass set to %.1f kg", kg);
+        }
+    } else if (strncmp(cmd, "set:axis:", 9) == 0) {
+        const char *ax = cmd + 9;
+        float x = 0.0f, y = 0.0f, z = 0.0f;
+        if      (strcmp(ax, "+X") == 0) x =  1.0f;
+        else if (strcmp(ax, "-X") == 0) x = -1.0f;
+        else if (strcmp(ax, "+Y") == 0) y =  1.0f;
+        else if (strcmp(ax, "-Y") == 0) y = -1.0f;
+        else if (strcmp(ax, "+Z") == 0) z =  1.0f;
+        else if (strcmp(ax, "-Z") == 0) z = -1.0f;
+        else { ESP_LOGW(TAG, "Unknown axis: %s", ax); return; }
+        imu_power_set_forward_axis(x, y, z);
+        ESP_LOGI(TAG, "Forward axis set to %s", ax);
+    } else if (strncmp(cmd, "set:catch:", 10) == 0) {
+        float g;
+        if (sscanf(cmd + 10, "%f", &g) == 1 && g > 0.0f) {
+            stroke_detector_set_catch_threshold(g);
+            ESP_LOGI(TAG, "Catch threshold set to %.3f g", g);
+        }
+    } else if (strncmp(cmd, "set:recovery:", 13) == 0) {
+        float g;
+        if (sscanf(cmd + 13, "%f", &g) == 1 && g > 0.0f) {
+            stroke_detector_set_recovery_threshold(g);
+            ESP_LOGI(TAG, "Recovery threshold set to %.3f g", g);
+        }
     }
 }
 

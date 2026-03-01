@@ -67,3 +67,12 @@ void imu_power_update(imu_power_state_t *state,
 /* Toggle verbose per-sample logging (raw accel, phase, delta-v).
  * Off by default; enable via the browser log viewer. */
 void imu_power_set_verbose(bool verbose);
+
+/* Update total moving mass used for power calculation (kg).
+ * Default: TOTAL_MASS_KG. Takes effect immediately on the next stroke. */
+void imu_power_set_mass(float mass_kg);
+
+/* Update the forward axis unit vector.
+ * Pass one of (+/-1, 0, 0), (0, +/-1, 0), or (0, 0, +/-1).
+ * Default: FORWARD_AXIS_X/Y/Z. Takes effect immediately. */
+void imu_power_set_forward_axis(float x, float y, float z);

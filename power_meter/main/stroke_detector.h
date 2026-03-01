@@ -30,6 +30,11 @@ typedef struct {
 
 void stroke_detector_init(stroke_state_t *state);
 
+/* Update the catch and recovery thresholds (in g).
+ * Defaults: STROKE_CATCH_THRESHOLD_G / STROKE_RECOVERY_THRESHOLD_G. */
+void stroke_detector_set_catch_threshold(float catch_g);
+void stroke_detector_set_recovery_threshold(float recovery_g);
+
 /* Feed one acceleration sample (magnitude in g, timestamp in microseconds).
  * Returns 1 if a stroke just completed, 0 otherwise. */
 int stroke_detector_update(stroke_state_t *state, float accel_magnitude_g, int64_t timestamp_us);

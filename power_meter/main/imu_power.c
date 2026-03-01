@@ -8,9 +8,13 @@
 
 #define TAG "IMU_POWER"
 
-static volatile bool s_verbose = false;
+static volatile bool  s_verbose   = false;
+static float          s_mass_kg   = TOTAL_MASS_KG;
+static float          s_forward[3] = { FORWARD_AXIS_X, FORWARD_AXIS_Y, FORWARD_AXIS_Z };
 
-void imu_power_set_verbose(bool verbose) { s_verbose = verbose; }
+void imu_power_set_verbose(bool verbose)                  { s_verbose      = verbose; }
+void imu_power_set_mass(float mass_kg)                    { s_mass_kg      = mass_kg; }
+void imu_power_set_forward_axis(float x, float y, float z){ s_forward[0]=x; s_forward[1]=y; s_forward[2]=z; }
 
 /* Gravity constant (m/s^2). MPU6050 returns values in g, so 1.0. */
 #define GRAVITY_G 1.0f
@@ -88,8 +92,8 @@ void imu_power_update(imu_power_state_t *state,
 
     if (!cal->calibrated || dt_s <= 0.0f) return;
 
-    /* Forward unit vector (configurable) */
-    const float forward[3] = { FORWARD_AXIS_X, FORWARD_AXIS_Y, FORWARD_AXIS_Z };
+    /* Forward unit vector (runtime-configurable via imu_power_set_forward_axis) */
+    const float *forward = s_forward;
 
     /* Raw reading as array for dot products */
     const float raw[3] = { acce->acce_x, acce->acce_y, acce->acce_z };
@@ -136,14 +140,14 @@ void imu_power_update(imu_power_state_t *state,
                           state->prev_phase != STROKE_PHASE_RELEASE);
     if (stroke_ending && state->stroke_dt_s > 0.0f) {
         float dv = state->stroke_delta_v_ms;
-        state->avg_stroke_power_w = 0.5f * state->mass_kg * dv * dv / state->stroke_dt_s;
+        state->avg_stroke_power_w = 0.5f * s_mass_kg * dv * dv / state->stroke_dt_s;
         ESP_LOGI(TAG, "Stroke: delta_v=%.3f m/s  dur=%.2f s  power=%.1f W",
                  dv, state->stroke_dt_s, state->avg_stroke_power_w);
     }
 
     /* Drag estimation during recovery (kept for future GPS fusion) */
     if (stroke_phase == STROKE_PHASE_RECOVERY && a_forward_ms2 < 0.0f) {
-        float drag_estimate = -state->mass_kg * a_forward_ms2;
+        float drag_estimate = -s_mass_kg * a_forward_ms2;
         state->drag_force_n = 0.9f * state->drag_force_n + 0.1f * drag_estimate;
     }
 
