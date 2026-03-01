@@ -22,6 +22,7 @@
 
 #include "gap.h"
 #include "ble_power_service.h"
+#include "wifi_log_server.h"
 
 /* 0 = sine wave demo, 1 = IMU-based stroke detection */
 #define USE_IMU_POWER 1
@@ -77,6 +78,24 @@ static void nimble_host_task(void *param) {
 
 #if USE_IMU_POWER
 
+static volatile bool s_recalibrate = false;
+
+static void on_ws_command(const char *cmd)
+{
+    if (strcmp(cmd, "recalibrate") == 0) {
+        s_recalibrate = true;
+        ESP_LOGI(TAG, "Recalibration requested via browser");
+    } else if (strcmp(cmd, "verbose:on") == 0) {
+        imu_power_set_verbose(true);
+        wifi_log_server_set_status("!verbose:on");
+        ESP_LOGI(TAG, "Verbose IMU logging ON");
+    } else if (strcmp(cmd, "verbose:off") == 0) {
+        imu_power_set_verbose(false);
+        wifi_log_server_set_status("!verbose:off");
+        ESP_LOGI(TAG, "Verbose IMU logging OFF");
+    }
+}
+
 static void power_update_task(void *param) {
     mpu6050_handle_t mpu = (mpu6050_handle_t)param;
     stroke_state_t stroke = {0};
@@ -86,17 +105,22 @@ static void power_update_task(void *param) {
     stroke_detector_init(&stroke);
     imu_power_init(&power, TOTAL_MASS_KG);
 
-    /* Run gravity calibration — device must be still for ~2 seconds */
+    /* Run gravity calibration. Device must be still for ~2 seconds. */
     imu_calibrate(&cal, mpu);
 
     int ble_notify_counter = 0;
     const int ble_notify_every = POWER_UPDATE_PERIOD_MS / IMU_SAMPLE_MS;
     int64_t last_sample_us = esp_timer_get_time();
-    float last_power_w = 0.0f;
 
     ESP_LOGI(TAG, "IMU power task running (20Hz IMU, 10Hz BLE)");
 
     while (1) {
+        if (s_recalibrate) {
+            s_recalibrate = false;
+            ESP_LOGI(TAG, "Recalibrating: hold device still...");
+            imu_calibrate(&cal, mpu);
+        }
+
         mpu6050_acce_value_t acce;
         if (mpu6050_get_acce(mpu, &acce) == ESP_OK) {
             int64_t now = esp_timer_get_time();
@@ -112,28 +136,19 @@ static void power_update_task(void *param) {
             /* Update stroke detector */
             int stroke_done = stroke_detector_update(&stroke, dynamic_g, now);
             if (stroke_done) {
-                /* Real stroke completed — update cadence on the watch */
+                /* Stroke completed, update cadence */
                 power_service_update_crank(now);
             }
 
             /* Update power estimator with signed forward acceleration */
-            float inst_power_w = 0.0f;
-            imu_power_update(&power, &cal, &acce, stroke.phase, dt_s, &inst_power_w);
-
-            /* Hold the last non-zero power reading to send over BLE */
-            if (inst_power_w > 0.0f) {
-                last_power_w = inst_power_w;
-            }
+            float out_w = 0.0f;
+            imu_power_update(&power, &cal, &acce, stroke.phase, dt_s, &out_w);
         }
 
         /* Send BLE notification at 10 Hz */
         if (++ble_notify_counter >= ble_notify_every) {
             ble_notify_counter = 0;
-            /* Use stroke average power between strokes for a stable reading */
-            float send_watts = (stroke.phase == STROKE_PHASE_PULL)
-                               ? last_power_w
-                               : power.avg_stroke_power_w;
-            send_power_notification((int16_t)send_watts);
+            send_power_notification((int16_t)power.avg_stroke_power_w);
         }
 
         vTaskDelay(pdMS_TO_TICKS(IMU_SAMPLE_MS));
@@ -174,7 +189,10 @@ void app_main(void) {
     }
     ESP_ERROR_CHECK(ret);
 
+    wifi_log_server_start("PowerMeter", "");
+
 #if USE_IMU_POWER
+    wifi_log_server_set_command_cb(on_ws_command);
     /* Initialize I2C and MPU6050 */
     i2c_config_t conf = {
         .mode             = I2C_MODE_MASTER,
@@ -189,14 +207,14 @@ void app_main(void) {
 
     mpu6050_handle_t mpu = mpu6050_create(I2C_PORT, MPU6050_I2C_ADDRESS);
     if (mpu == NULL) {
-        ESP_LOGE(TAG, "mpu6050_create failed — check I2C wiring");
+        ESP_LOGE(TAG, "mpu6050_create failed: check I2C wiring");
         return;
     }
     ESP_ERROR_CHECK(mpu6050_wake_up(mpu));
     ESP_ERROR_CHECK(mpu6050_config(mpu, ACCE_FS_4G, GYRO_FS_500DPS));
 
     /* Configure MPU6050 digital low-pass filter (DLPF) to 10 Hz cutoff.
-     * Register 0x1A (CONFIG), bits 2:0 = 5 → 10 Hz accel/gyro bandwidth.
+     * Register 0x1A (CONFIG), bits 2:0 = 5 gives 10 Hz accel/gyro bandwidth.
      *
      * At our 20 Hz sampling rate, a 10 Hz cutoff means the filter "memory"
      * spans ~1/10Hz = 100ms = 2 samples. A spike must persist for ~2

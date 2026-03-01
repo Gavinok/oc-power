@@ -8,7 +8,11 @@
 
 #define TAG "IMU_POWER"
 
-/* Gravity constant (m/s²) — MPU6050 returns values in g, so 1.0 */
+static volatile bool s_verbose = false;
+
+void imu_power_set_verbose(bool verbose) { s_verbose = verbose; }
+
+/* Gravity constant (m/s^2). MPU6050 returns values in g, so 1.0. */
 #define GRAVITY_G 1.0f
 
 /* Dot product of two 3D vectors */
@@ -30,7 +34,7 @@ void imu_calibrate(imu_calibration_t *cal, mpu6050_handle_t mpu) {
     float sum[3] = {0, 0, 0};
     int count = 0;
 
-    ESP_LOGI(TAG, "Gravity calibration — hold still for 2 seconds...");
+    ESP_LOGI(TAG, "Gravity calibration: hold still for 2 seconds...");
 
     for (int i = 0; i < CALIBRATION_SAMPLES; i++) {
         mpu6050_acce_value_t acce;
@@ -44,7 +48,7 @@ void imu_calibrate(imu_calibration_t *cal, mpu6050_handle_t mpu) {
     }
 
     if (count == 0) {
-        ESP_LOGE(TAG, "Calibration failed — no samples read");
+        ESP_LOGE(TAG, "Calibration failed: no samples read");
         cal->calibrated = false;
         return;
     }
@@ -58,7 +62,7 @@ void imu_calibrate(imu_calibration_t *cal, mpu6050_handle_t mpu) {
              cal->gravity[0], cal->gravity[1], cal->gravity[2]);
 
     if (!normalize3(cal->gravity)) {
-        ESP_LOGE(TAG, "Calibration failed — gravity vector has zero magnitude");
+        ESP_LOGE(TAG, "Calibration failed: gravity vector has zero magnitude");
         cal->calibrated = false;
         return;
     }
@@ -90,8 +94,7 @@ void imu_power_update(imu_power_state_t *state,
     /* Raw reading as array for dot products */
     const float raw[3] = { acce->acce_x, acce->acce_y, acce->acce_z };
 
-    /* Remove gravity component: a_dynamic = raw - (raw·down)*down
-     * This leaves only the dynamic (motion) acceleration. */
+    /* Remove gravity component: a_dynamic = raw - dot(raw,down)*down */
     float gravity_component = dot3(raw, cal->gravity);
     float dynamic[3] = {
         raw[0] - gravity_component * cal->gravity[0],
@@ -102,10 +105,18 @@ void imu_power_update(imu_power_state_t *state,
     /* Project onto forward axis to get signed forward acceleration (in g) */
     float a_forward_g = dot3(dynamic, forward);
 
-    /* Convert g to m/s² */
+    /* Convert g to m/s^2 */
     float a_forward_ms2 = a_forward_g * 9.81f;
 
-    /* Detect stroke start (RECOVERY/RELEASE → CATCH transition) */
+    if (s_verbose) {
+        static const char * const phase_names[] = {"RECOVERY","CATCH","PULL","RELEASE"};
+        ESP_LOGI(TAG, "acce x=%.3f y=%.3f z=%.3f | a_fwd=%.3f m/s^2 | phase=%s | dv=%.3f m/s dt=%.2f s",
+                 acce->acce_x, acce->acce_y, acce->acce_z,
+                 a_forward_ms2, phase_names[stroke_phase],
+                 state->stroke_delta_v_ms, state->stroke_dt_s);
+    }
+
+    /* Detect stroke start: RECOVERY/RELEASE -> CATCH */
     bool new_stroke = (stroke_phase == STROKE_PHASE_CATCH &&
                        state->prev_phase != STROKE_PHASE_CATCH &&
                        state->prev_phase != STROKE_PHASE_PULL);
@@ -120,7 +131,7 @@ void imu_power_update(imu_power_state_t *state,
         state->stroke_dt_s       += dt_s;
     }
 
-    /* Compute power once at PULL→RELEASE transition */
+    /* Compute power once at PULL->RELEASE transition */
     bool stroke_ending = (stroke_phase == STROKE_PHASE_RELEASE &&
                           state->prev_phase != STROKE_PHASE_RELEASE);
     if (stroke_ending && state->stroke_dt_s > 0.0f) {

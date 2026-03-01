@@ -6,14 +6,15 @@
 
 A BLE peripheral for ESP32 that implements the standard Bluetooth Cycling Power Service (UUID 0x1818). It advertises as a cycling power sensor and can connect to bike computers, smartwatches (Garmin, Wahoo, etc.), and fitness apps.
 
-The power output follows a sine wave pattern to simulate varying effort levels, making it useful for testing and development of cycling applications.
+Power is estimated from an MPU6050 accelerometer mounted on the paddle shaft using a kinetic energy approach: =P = ½ × mass × Δv² / stroke_duration=, computed once per stroke. A sine wave demo mode is also available for testing without hardware.
 
 ** Features
 
 - Cycling Power Service (0x1818) compliant
-- Power Measurement notifications at 4 Hz
-- Simulated crank revolution data
-- Configurable power range and cycle period
+- IMU-based stroke detection and power estimation (MPU6050)
+- BLE power + cadence notifications at 10 Hz
+- WiFi SoftAP with live WebSocket log streaming to any browser
+- Sine wave demo mode (no IMU required, =USE_IMU_POWER=0=)
 
 ** BLE Characteristics
 
@@ -27,25 +28,32 @@ The power output follows a sine wave pattern to simulate varying effort levels, 
 
 #+BEGIN_EXAMPLE
 power_meter/
-├── CMakeLists.txt          # Project-level CMake configuration
-├── sdkconfig.defaults      # NimBLE stack configuration
-├── .clangd                 # Clangd LSP configuration
+├── CMakeLists.txt           # Project-level CMake configuration
+├── sdkconfig.defaults       # NimBLE + WiFi stack configuration
+├── .clangd                  # Clangd LSP configuration
 └── main/
-    ├── CMakeLists.txt      # Component registration
-    ├── main.c              # Application entry, BLE init, power update task
-    ├── gap.c               # GAP advertising and connection handling
-    ├── gap.h
-    ├── ble_power_service.c # GATT Cycling Power Service implementation
-    └── ble_power_service.h
+    ├── CMakeLists.txt       # Component registration
+    ├── main.c               # Application entry, BLE init, power update task
+    ├── gap.c/h              # GAP advertising and connection handling
+    ├── ble_power_service.c/h# GATT Cycling Power Service implementation
+    ├── stroke_detector.c/h  # Accelerometer-based stroke phase state machine
+    ├── imu_power.c/h        # Kinetic energy power estimator
+    └── wifi_log_server.c/h  # SoftAP + WebSocket live log server
 #+END_EXAMPLE
 
 ** File Descriptions
 
-- =main.c= :: Application entry point. Initializes NVS, NimBLE stack, GAP, and GATT services. Runs a FreeRTOS task that sends power notifications using a sine wave pattern.
+- =main.c= :: Entry point. Initializes NVS, WiFi log server, I2C/MPU6050, NimBLE stack, and spawns the power update task.
 
-- =gap.c/h= :: Handles BLE advertising with the Cycling Power Service UUID and manages connection/disconnection events.
+- =gap.c/h= :: BLE advertising with the Cycling Power Service UUID; connection/disconnection management.
 
-- =ble_power_service.c/h= :: Implements the Cycling Power Service with three characteristics: Power Measurement (notify), Power Feature (read), and Sensor Location (read).
+- =ble_power_service.c/h= :: Cycling Power Service — Power Measurement (notify), Power Feature (read), Sensor Location (read).
+
+- =stroke_detector.c/h= :: State machine (RECOVERY → CATCH → PULL → RELEASE) driven by accelerometer magnitude.
+
+- =imu_power.c/h= :: Removes gravity, integrates forward acceleration over CATCH+PULL, computes =P = ½mv²/t= at each stroke end.
+
+- =wifi_log_server.c/h= :: Starts a SoftAP, serves an HTML log viewer at =http://192.168.4.1=, and streams all =ESP_LOG*= output to connected browsers over WebSocket.
 
 * Configuration
 
@@ -89,6 +97,27 @@ To find your serial port:
 #+BEGIN_SRC shell
 ls /dev/tty{USB,ACM}* 2>/dev/null
 #+END_SRC
+
+* Live Log Viewer (WiFi)
+
+After flashing, the ESP32 broadcasts a WiFi access point called =PowerMeter= (open, no password). Connect to it and open =http://192.168.4.1= in a browser to see a live stream of all log output.
+
+The page has three buttons:
+- *Clear* — wipe the log display
+- *Recalibrate* — trigger a fresh gravity calibration (hold the device still for ~2 seconds after pressing)
+- *Verbose* — toggle per-sample accelerometer logging (raw XYZ, forward acceleration, stroke phase, Δv)
+
+** Connecting on Android
+
+Android detects no internet on the AP and may silently route browser traffic over cellular, making =192.168.4.1= unreachable. The most reliable fix:
+
+1. Enable airplane mode
+2. Turn WiFi back on and connect to =PowerMeter=
+3. Open =http://192.168.4.1= in Chrome (include the =http://= prefix — Brave and Firefox may try to upgrade to HTTPS and fail)
+
+** Connecting on iPhone / Mac
+
+Join =PowerMeter= normally and open =http://192.168.4.1= in Safari. If prompted "No internet, use anyway?", tap yes.
 
 * Verification
 

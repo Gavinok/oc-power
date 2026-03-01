@@ -29,7 +29,7 @@ int stroke_detector_update(stroke_state_t *state, float accel_g, int64_t ts_us) 
             state->phase = STROKE_PHASE_PULL;
             ESP_LOGD(TAG, "PULL peak %.3f g", accel_g);
         } else if (accel_g < STROKE_RECOVERY_THRESHOLD_G) {
-            /* Spike too brief — treat as noise, return to recovery */
+            /* Spike too brief, treat as noise, return to recovery */
             state->phase = STROKE_PHASE_RECOVERY;
         }
         break;
@@ -64,7 +64,7 @@ int stroke_detector_update(stroke_state_t *state, float accel_g, int64_t ts_us) 
             }
             state->phase = STROKE_PHASE_RECOVERY;
         } else if (accel_g > STROKE_CATCH_THRESHOLD_G) {
-            /* Acceleration picked back up — back into pull */
+            /* Acceleration picked back up, back into pull */
             state->phase = STROKE_PHASE_PULL;
         }
         break;

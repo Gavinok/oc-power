@@ -6,3 +6,16 @@ CONFIG_BT_NIMBLE_ENABLED=y
 
 # Disable BLE 5.0 features (not needed for power meter)
 CONFIG_BT_NIMBLE_50_FEATURE_SUPPORT=n
+
+# WiFi + BLE coexistence
+CONFIG_ESP_COEX_ENABLED=y
+CONFIG_SW_COEXIST_ENABLE=y
+
+# WebSocket support in esp_http_server
+CONFIG_HTTPD_WS_SUPPORT=y
+
+# Move WiFi code out of IRAM (BLE already fills it; log streaming doesn't need fast WiFi paths)
+CONFIG_ESP_WIFI_IRAM_OPT=n
+CONFIG_ESP_WIFI_RX_IRAM_OPT=n
+CONFIG_ESP32_WIFI_IRAM_OPT=n
+CONFIG_ESP32_WIFI_RX_IRAM_OPT=n
