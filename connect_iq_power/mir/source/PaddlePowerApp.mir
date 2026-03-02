@@ -4,103 +4,92 @@ import Toybox.Application;
 import Toybox.BluetoothLowEnergy;
 [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 3; @symbol_importdef<0> = [Toybox,3,7,13]; @symbol_importdef<1> = [Lang,3,14,18]; ]
 import Toybox.Lang;
-[ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 4; @symbol_importdef<0> = [Toybox,4,7,13]; @symbol_importdef<1> = [WatchUi,4,14,21]; ]
+[ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 4; @symbol_importdef<0> = [Toybox,4,7,13]; @symbol_importdef<1> = [System,4,14,20]; ]
+import Toybox.System;
+[ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 5; @symbol_importdef<0> = [Toybox,5,7,13]; @symbol_importdef<1> = [WatchUi,5,14,21]; ]
 import Toybox.WatchUi;
-[ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 6; @symbol_classdef = [PaddlePowerApp,6,6,20]; @symbol_extends<0> = [Application,6,29,40]; @symbol_extends<1> = [AppBase,6,41,48]; ]
+[ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 7; @symbol_classdef = [PaddlePowerApp,7,6,20]; @symbol_extends<0> = [Application,7,29,40]; @symbol_extends<1> = [AppBase,7,41,48]; ]
 class PaddlePowerApp extends Application.AppBase {
-    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 6; ]
+    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 7; ]
     <init> {
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 12 8 ]
-        %tmp.1 = newa 3 Lang.Array<Lang.Number>;
-        symbol [ Lang %tmp.1 12 52 56 ];
-        symbol [ Array %tmp.1 12 57 62 ];
-        symbol [ Lang %tmp.1 12 63 67 ];
-        symbol [ Number %tmp.1 12 68 74 ];
-        %tmp.2 = 0;
-        %tmp.3 = dup %tmp.1;
-        %tmp.4 = aputv %tmp.3 0 %tmp.2;
-        %tmp.5 = 0;
-        %tmp.6 = dup %tmp.4;
-        %tmp.7 = aputv %tmp.6 1 %tmp.5;
-        %tmp.8 = 0;
-        %tmp.9 = dup %tmp.7;
-        %tmp.10 = aputv %tmp.9 2 %tmp.8;
-        putv self :power3sBuffer %tmp.10;
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 15 8 ]
+        %tmp.1 = newa 0 Lang.Array;
+        symbol [ Lang %tmp.1 15 45 49 ];
+        symbol [ Array %tmp.1 15 50 55 ];
+        putv self :power3sHistory %tmp.1;
     }
-    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 6; ]
+    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 7; ]
     static
     <init> {
     }
-    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 9; @position = 8; @symbol_vardef = [currentPower,9,8,20]; @symbol_type<0> = [Lang,9,24,28]; @symbol_type<1> = [Number,9,29,35]; ]
+    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 10; @position = 8; @symbol_vardef = [currentPower,10,8,20]; @symbol_type<0> = [Lang,10,25,29]; @symbol_type<1> = [Number,10,30,36]; ]
     var currentPower as Lang.Number = 0;
-    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 10; @position = 8; @symbol_vardef = [totalPower,10,8,18]; @symbol_type<0> = [Lang,10,24,28]; @symbol_type<1> = [Long,10,29,33]; ]
+    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 11; @position = 8; @symbol_vardef = [totalPower,11,8,18]; @symbol_type<0> = [Lang,11,25,29]; @symbol_type<1> = [Long,11,30,34]; ]
     var totalPower as Lang.Long = 0l;
-    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 11; @position = 8; @symbol_vardef = [readingCount,11,8,20]; @symbol_type<0> = [Lang,11,24,28]; @symbol_type<1> = [Number,11,29,35]; ]
+    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 12; @position = 8; @symbol_vardef = [readingCount,12,8,20]; @symbol_type<0> = [Lang,12,25,29]; @symbol_type<1> = [Number,12,30,36]; ]
     var readingCount as Lang.Number = 0;
-    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 12; @position = 8; @symbol_vardef = [power3sBuffer,12,8,21]; @symbol_type<0> = [Lang,12,25,29]; @symbol_type<1> = [Array,12,30,35]; ]
-    var power3sBuffer as Lang.Array;
-    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 13; @position = 8; @symbol_vardef = [bufferIndex,13,8,19]; @symbol_type<0> = [Lang,13,24,28]; @symbol_type<1> = [Number,13,29,35]; ]
-    var bufferIndex as Lang.Number = 0;
-    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 14; @position = 8; @symbol_vardef = [bleStatus,14,8,17]; @symbol_type<0> = [Lang,14,24,28]; @symbol_type<1> = [String,14,29,35]; ]
+    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 15; @position = 8; @symbol_vardef = [power3sHistory,15,8,22]; @symbol_type<0> = [Lang,15,26,30]; @symbol_type<1> = [Array,15,31,36]; ]
+    var power3sHistory as Lang.Array;
+    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 16; @position = 8; @symbol_vardef = [bleStatus,16,8,17]; @symbol_type<0> = [Lang,16,25,29]; @symbol_type<1> = [String,16,30,36]; ]
     var bleStatus as Lang.String = "Scanning";
-    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 16; @position = 16; @symbol_vardef = [_bleDelegate,16,16,28]; @symbol_type<0> = [PowerBleDelegate,16,32,48]; ]
+    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 18; @position = 16; @symbol_vardef = [_bleDelegate,18,16,28]; @symbol_type<0> = [PowerBleDelegate,18,32,48]; ]
     private
     var _bleDelegate as PowerBleDelegate or Null;
-    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 18; @symbol_functiondef = [initialize,18,13,23]; ]
+    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 20; @symbol_functiondef = [initialize,20,13,23]; ]
     function initialize() as Void {
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_18_26_20_4_start:
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 19 8 ]
-        symbol [ AppBase %tmp.2 19 8 15 ];
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_20_26_22_4_start:
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 21 8 ]
+        symbol [ AppBase %tmp.2 21 8 15 ];
         %tmp.2 = getv ? :AppBase;
-        symbol [ initialize %tmp.3 19 16 26 ];
+        symbol [ initialize %tmp.3 21 16 26 ];
         %tmp.3 = getv function %tmp.2 :initialize;
         invoke %tmp.2 %tmp.3();
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_18_26_20_4_stop:
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_20_26_22_4_stop:
     }
-    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 22; @symbol_functiondef = [onStart,22,13,20]; @symbol_param<0> = [state,22,21,26]; @symbol_param<0>_type<0> = [Lang,22,30,34]; @symbol_param<0>_type<1> = [Dictionary,22,35,45]; ]
+    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 24; @symbol_functiondef = [onStart,24,13,20]; @symbol_param<0> = [state,24,21,26]; @symbol_param<0>_type<0> = [Lang,24,30,34]; @symbol_param<0>_type<1> = [Dictionary,24,35,45]; ]
     function onStart(state as Lang.Dictionary or Null) as Void {
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_22_56_45_4_start:
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 24 8 ]
-        [ "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_22_56_45_4_start" "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_22_56_45_4_stop" ]
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_24_56_47_4_start:
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 26 8 ]
+        [ "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_24_56_47_4_start" "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_24_56_47_4_stop" ]
         %powerServiceUuid.1 = local;
-        symbol [ powerServiceUuid %powerServiceUuid.1 24 12 28 ];
-        symbol [ BluetoothLowEnergy %tmp.1 24 31 49 ];
+        symbol [ powerServiceUuid %powerServiceUuid.1 26 12 28 ];
+        symbol [ BluetoothLowEnergy %tmp.1 26 31 49 ];
         %tmp.1 = getm $.Toybox.BluetoothLowEnergy;
-        symbol [ stringToUuid %tmp.2 24 50 62 ];
+        symbol [ stringToUuid %tmp.2 26 50 62 ];
         %tmp.2 = getv function %tmp.1 :stringToUuid;
         %tmp.3 = "00001818-0000-1000-8000-00805F9B34FB";
         %tmp.4 = invoke %tmp.1 %tmp.2(%tmp.3);
         lputv %powerServiceUuid.1 %tmp.4;
-        symbol [ powerServiceUuid %powerServiceUuid.1 24 12 28 ];
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 27 8 ]
-        [ "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_22_56_45_4_start" "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_22_56_45_4_stop" ]
+        symbol [ powerServiceUuid %powerServiceUuid.1 26 12 28 ];
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 29 8 ]
+        [ "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_24_56_47_4_start" "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_24_56_47_4_stop" ]
         %powerCharUuid.2 = local;
-        symbol [ powerCharUuid %powerCharUuid.2 27 12 25 ];
-        symbol [ BluetoothLowEnergy %tmp.5 27 28 46 ];
+        symbol [ powerCharUuid %powerCharUuid.2 29 12 25 ];
+        symbol [ BluetoothLowEnergy %tmp.5 29 28 46 ];
         %tmp.5 = getm $.Toybox.BluetoothLowEnergy;
-        symbol [ stringToUuid %tmp.6 27 47 59 ];
+        symbol [ stringToUuid %tmp.6 29 47 59 ];
         %tmp.6 = getv function %tmp.5 :stringToUuid;
         %tmp.7 = "00002A63-0000-1000-8000-00805F9B34FB";
         %tmp.8 = invoke %tmp.5 %tmp.6(%tmp.7);
         lputv %powerCharUuid.2 %tmp.8;
-        symbol [ powerCharUuid %powerCharUuid.2 27 12 25 ];
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 31 8 ]
-        [ "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_22_56_45_4_start" "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_22_56_45_4_stop" ]
+        symbol [ powerCharUuid %powerCharUuid.2 29 12 25 ];
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 33 8 ]
+        [ "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_24_56_47_4_start" "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_24_56_47_4_stop" ]
         %charDef.3 = local;
-        symbol [ charDef %charDef.3 31 12 19 ];
+        symbol [ charDef %charDef.3 33 12 19 ];
         %tmp.9 = newd 2;
         %tmp.11 = const :uuid;
-        symbol [ uuid %tmp.11 32 13 17 const ];
+        symbol [ uuid %tmp.11 34 13 17 const ];
         %tmp.12 = lgetv %powerCharUuid.2;
-        symbol [ powerCharUuid %tmp.12 32 28 41 ];
+        symbol [ powerCharUuid %tmp.12 34 28 41 ];
         %tmp.13 = dup %tmp.9;
         %tmp.14 = aputv %tmp.13 %tmp.11 %tmp.12;
         %tmp.16 = const :descriptors;
-        symbol [ descriptors %tmp.16 33 13 24 const ];
+        symbol [ descriptors %tmp.16 35 13 24 const ];
         %tmp.17 = newa 1;
-        symbol [ BluetoothLowEnergy %tmp.18 33 29 47 ];
+        symbol [ BluetoothLowEnergy %tmp.18 35 29 47 ];
         %tmp.18 = getm $.Toybox.BluetoothLowEnergy;
-        symbol [ cccdUuid %tmp.19 33 48 56 ];
+        symbol [ cccdUuid %tmp.19 35 48 56 ];
         %tmp.19 = getv function %tmp.18 :cccdUuid;
         %tmp.20 = invoke %tmp.18 %tmp.19();
         %tmp.21 = dup %tmp.17;
@@ -108,107 +97,107 @@ _home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_22_56_4
         %tmp.23 = dup %tmp.14;
         %tmp.24 = aputv %tmp.23 %tmp.16 %tmp.22;
         lputv %charDef.3 %tmp.24;
-        symbol [ charDef %charDef.3 31 12 19 ];
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 35 8 ]
-        [ "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_22_56_45_4_start" "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_22_56_45_4_stop" ]
+        symbol [ charDef %charDef.3 33 12 19 ];
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 37 8 ]
+        [ "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_24_56_47_4_start" "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_24_56_47_4_stop" ]
         %profileDef.4 = local;
-        symbol [ profileDef %profileDef.4 35 12 22 ];
+        symbol [ profileDef %profileDef.4 37 12 22 ];
         %tmp.25 = newd 2;
         %tmp.27 = const :uuid;
-        symbol [ uuid %tmp.27 36 13 17 const ];
+        symbol [ uuid %tmp.27 38 13 17 const ];
         %tmp.28 = lgetv %powerServiceUuid.1;
-        symbol [ powerServiceUuid %tmp.28 36 32 48 ];
+        symbol [ powerServiceUuid %tmp.28 38 32 48 ];
         %tmp.29 = dup %tmp.25;
         %tmp.30 = aputv %tmp.29 %tmp.27 %tmp.28;
         %tmp.32 = const :characteristics;
-        symbol [ characteristics %tmp.32 37 13 28 const ];
+        symbol [ characteristics %tmp.32 39 13 28 const ];
         %tmp.33 = newa 1;
         %tmp.34 = lgetv %charDef.3;
-        symbol [ charDef %tmp.34 37 33 40 ];
+        symbol [ charDef %tmp.34 39 33 40 ];
         %tmp.35 = dup %tmp.33;
         %tmp.36 = aputv %tmp.35 0 %tmp.34;
         %tmp.37 = dup %tmp.30;
         %tmp.38 = aputv %tmp.37 %tmp.32 %tmp.36;
         lputv %profileDef.4 %tmp.38;
-        symbol [ profileDef %profileDef.4 35 12 22 ];
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 39 8 ]
-        symbol [ BluetoothLowEnergy %tmp.39 39 8 26 ];
+        symbol [ profileDef %profileDef.4 37 12 22 ];
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 41 8 ]
+        symbol [ BluetoothLowEnergy %tmp.39 41 8 26 ];
         %tmp.39 = getm $.Toybox.BluetoothLowEnergy;
-        symbol [ registerProfile %tmp.40 39 27 42 ];
+        symbol [ registerProfile %tmp.40 41 27 42 ];
         %tmp.40 = getv function %tmp.39 :registerProfile;
         %tmp.41 = lgetv %profileDef.4;
-        symbol [ profileDef %tmp.41 39 43 53 ];
+        symbol [ profileDef %tmp.41 41 43 53 ];
         invoke %tmp.39 %tmp.40(%tmp.41);
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 42 8 ]
-        symbol [ PowerBleDelegate %tmp.45 42 27 43 ];
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 44 8 ]
+        symbol [ PowerBleDelegate %tmp.45 44 27 43 ];
         %tmp.45 = getv ? :PowerBleDelegate;
         %tmp.46 = self;
-        symbol [ self %tmp.46 42 44 48 ];
+        symbol [ self %tmp.46 44 44 48 ];
         %tmp.42 = newc %tmp.45 (%tmp.46);
-        symbol [ _bleDelegate ? 42 8 20 ];
+        symbol [ _bleDelegate ? 44 8 20 ];
         putv self :_bleDelegate %tmp.42;
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 43 8 ]
-        symbol [ BluetoothLowEnergy %tmp.47 43 8 26 ];
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 45 8 ]
+        symbol [ BluetoothLowEnergy %tmp.47 45 8 26 ];
         %tmp.47 = getm $.Toybox.BluetoothLowEnergy;
-        symbol [ setDelegate %tmp.48 43 27 38 ];
+        symbol [ setDelegate %tmp.48 45 27 38 ];
         %tmp.48 = getv function %tmp.47 :setDelegate;
-        symbol [ _bleDelegate %tmp.50 43 39 51 ];
+        symbol [ _bleDelegate %tmp.50 45 39 51 ];
         %tmp.50 = getv ? :_bleDelegate;
         invoke %tmp.47 %tmp.48(%tmp.50);
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 44 8 ]
-        symbol [ _bleDelegate %tmp.52 44 8 20 ];
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 46 8 ]
+        symbol [ _bleDelegate %tmp.52 46 8 20 ];
         %tmp.52 = getv ? :_bleDelegate;
-        symbol [ startScan %tmp.53 44 21 30 ];
+        symbol [ startScan %tmp.53 46 21 30 ];
         %tmp.53 = getv function %tmp.52 :startScan;
         invoke %tmp.52 %tmp.53();
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_22_56_45_4_stop:
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_24_56_47_4_stop:
     }
-    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 47; @symbol_functiondef = [onStop,47,13,19]; @symbol_param<0> = [state,47,20,25]; @symbol_param<0>_type<0> = [Lang,47,29,33]; @symbol_param<0>_type<1> = [Dictionary,47,34,44]; ]
+    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 49; @symbol_functiondef = [onStop,49,13,19]; @symbol_param<0> = [state,49,20,25]; @symbol_param<0>_type<0> = [Lang,49,29,33]; @symbol_param<0>_type<1> = [Dictionary,49,34,44]; ]
     function onStop(state as Lang.Dictionary or Null) as Void {
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_47_55_51_4_start:
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 48 8 ]
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_48_8_50_8_if_stmt:
-        symbol [ _bleDelegate %tmp.2 48 12 24 ];
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_49_55_53_4_start:
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 50 8 ]
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_50_8_52_8_if_stmt:
+        symbol [ _bleDelegate %tmp.2 50 12 24 ];
         %tmp.2 = getv ? :_bleDelegate;
         %tmp.3 = null;
         %tmp.4 = ne %tmp.2 %tmp.3;
-        bf %tmp.4 @_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_48_8_50_8_if_end;
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_48_8_50_8_if_true:
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_48_34_50_8_start:
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 49 12 ]
-        symbol [ _bleDelegate %tmp.6 49 13 25 ];
+        bf %tmp.4 @_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_50_8_52_8_if_end;
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_50_8_52_8_if_true:
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_50_34_52_8_start:
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 51 12 ]
+        symbol [ _bleDelegate %tmp.6 51 13 25 ];
         %tmp.6 = getv ? :_bleDelegate;
         %tmp.7 = as %tmp.6 { (!Null) };
         %tmp.8 = as %tmp.7 PowerBleDelegate;
-        symbol [ PowerBleDelegate %tmp.8 49 29 45 ];
-        symbol [ stopScan %tmp.9 49 47 55 ];
+        symbol [ PowerBleDelegate %tmp.8 51 29 45 ];
+        symbol [ stopScan %tmp.9 51 47 55 ];
         %tmp.9 = getv function %tmp.8 :stopScan;
         invoke %tmp.8 %tmp.9();
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_48_34_50_8_stop:
-        goto @_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_48_8_50_8_if_end;
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_48_8_50_8_if_end:
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_47_55_51_4_stop:
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_50_34_52_8_stop:
+        goto @_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_50_8_52_8_if_end;
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_50_8_52_8_if_end:
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_49_55_53_4_stop:
     }
-    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 53; @symbol_functiondef = [getInitialView,53,13,27]; @symbol_return<0> = [WatchUi,53,34,41]; @symbol_return<1> = [Views,53,42,47]; @symbol_return<2> = [WatchUi,53,53,60]; @symbol_return<3> = [Views,53,61,66]; @symbol_return<4> = [WatchUi,53,68,75]; @symbol_return<5> = [InputDelegates,53,76,90]; ]
+    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 55; @symbol_functiondef = [getInitialView,55,13,27]; @symbol_return<0> = [WatchUi,55,34,41]; @symbol_return<1> = [Views,55,42,47]; @symbol_return<2> = [WatchUi,55,53,60]; @symbol_return<3> = [Views,55,61,66]; @symbol_return<4> = [WatchUi,55,68,75]; @symbol_return<5> = [InputDelegates,55,76,90]; ]
     function getInitialView() as [WatchUi.Views] or [WatchUi.Views, WatchUi.InputDelegates] {
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_53_92_55_4_start:
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 54 8 ]
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_55_92_57_4_start:
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 56 8 ]
         %tmp.1 = newa 1;
-        symbol [ PaddlePowerView %tmp.5 54 20 35 ];
+        symbol [ PaddlePowerView %tmp.5 56 20 35 ];
         %tmp.5 = getv ? :PaddlePowerView;
         %tmp.2 = newc %tmp.5 ();
         %tmp.6 = dup %tmp.1;
         %tmp.7 = aputv %tmp.6 0 %tmp.2;
         ret %tmp.7;
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_53_92_55_4_stop:
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_55_92_57_4_stop:
     }
-    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 58; @symbol_functiondef = [onPowerReading,58,13,27]; @symbol_param<0> = [watts,58,28,33]; @symbol_param<0>_type<0> = [Lang,58,37,41]; @symbol_param<0>_type<1> = [Number,58,42,48]; ]
+    [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 60; @symbol_functiondef = [onPowerReading,60,13,27]; @symbol_param<0> = [watts,60,28,33]; @symbol_param<0>_type<0> = [Lang,60,37,41]; @symbol_param<0>_type<1> = [Number,60,42,48]; ]
     function onPowerReading(watts as Lang.Number) as Void {
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_58_58_68_4_start:
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 59 8 ]
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_60_58_78_4_start:
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 61 8 ]
         %tmp.1 = lgetv %watts;
-        symbol [ watts %tmp.1 59 23 28 ];
-        symbol [ currentPower ? 59 8 20 ];
+        symbol [ watts %tmp.1 61 24 29 ];
+        symbol [ currentPower ? 61 8 20 ];
         putv self :currentPower %tmp.1;
 [ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 62 8 ]
         symbol [ totalPower %tmp.2 62 8 18 ];
@@ -226,38 +215,136 @@ _home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_58_58_6
         symbol [ readingCount ? 63 8 20 ];
         putv self :readingCount dup %tmp.7;
 [ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 66 8 ]
-        symbol [ power3sBuffer %tmp.8 66 8 21 ];
-        %tmp.8 = getv self :power3sBuffer;
-        %tmp.9 = lgetv %watts;
-        symbol [ watts %tmp.9 66 37 42 ];
-        symbol [ bufferIndex %tmp.11 66 22 33 ];
-        %tmp.11 = getv ? :bufferIndex;
-        aputv %tmp.8 %tmp.11 %tmp.9;
+        [ "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_60_58_78_4_start" "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_60_58_78_4_stop" ]
+        %now.1 = local;
+        symbol [ now %now.1 66 12 15 ];
+        symbol [ System %tmp.8 66 18 24 ];
+        %tmp.8 = getm $.Toybox.System;
+        symbol [ getTimer %tmp.9 66 25 33 ];
+        %tmp.9 = getv function %tmp.8 :getTimer;
+        %tmp.10 = invoke %tmp.8 %tmp.9();
+        lputv %now.1 %tmp.10;
+        symbol [ now %now.1 66 12 15 ];
 [ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 67 8 ]
-        symbol [ bufferIndex %tmp.13 67 23 34 ];
-        %tmp.13 = getv ? :bufferIndex;
-        %tmp.14 = 1;
-        %tmp.15 = add %tmp.13 %tmp.14;
-        %tmp.16 = 3;
-        %tmp.17 = mod %tmp.15 %tmp.16;
-        symbol [ bufferIndex ? 67 8 19 ];
-        putv self :bufferIndex %tmp.17;
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_58_58_68_4_stop:
+        symbol [ power3sHistory %tmp.12 67 8 22 ];
+        %tmp.12 = getv ? :power3sHistory;
+        symbol [ add %tmp.13 67 23 26 ];
+        %tmp.13 = getv function %tmp.12 :add;
+        %tmp.14 = newa 2 Lang.Array;
+        symbol [ Lang %tmp.14 67 43 47 ];
+        symbol [ Array %tmp.14 67 48 53 ];
+        %tmp.15 = lgetv %now.1;
+        symbol [ now %tmp.15 67 28 31 ];
+        %tmp.16 = dup %tmp.14;
+        %tmp.17 = aputv %tmp.16 0 %tmp.15;
+        %tmp.18 = lgetv %watts;
+        symbol [ watts %tmp.18 67 33 38 ];
+        %tmp.19 = dup %tmp.17;
+        %tmp.20 = aputv %tmp.19 1 %tmp.18;
+        invoke %tmp.12 %tmp.13(%tmp.20);
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 69 8 ]
+        [ "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_60_58_78_4_start" "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_60_58_78_4_stop" ]
+        %cutoff.2 = local;
+        symbol [ cutoff %cutoff.2 69 12 18 ];
+        %tmp.21 = lgetv %now.1;
+        symbol [ now %tmp.21 69 21 24 ];
+        %tmp.22 = 3000;
+        %tmp.23 = sub %tmp.21 %tmp.22;
+        lputv %cutoff.2 %tmp.23;
+        symbol [ cutoff %cutoff.2 69 12 18 ];
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 70 8 ]
+        [ "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_60_58_78_4_start" "_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_60_58_78_4_stop" ]
+        %i.3 = local;
+        symbol [ i %i.3 70 12 13 ];
+        %tmp.24 = 0;
+        lputv %i.3 %tmp.24;
+        symbol [ i %i.3 70 12 13 ];
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 71 8 ]
+        while @_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_71_8_74_8_while_test @_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_71_8_74_8_while_end;
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_71_8_74_8_while_test:
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_71_15_72_69_begin:
+        %tmp.25 = lgetv %i.3;
+        symbol [ i %tmp.25 71 15 16 ];
+        symbol [ power3sHistory %tmp.27 71 19 33 ];
+        %tmp.27 = getv ? :power3sHistory;
+        symbol [ size %tmp.28 71 34 38 ];
+        %tmp.28 = getv function %tmp.27 :size;
+        %tmp.29 = invoke %tmp.27 %tmp.28();
+        %tmp.30 = lt %tmp.25 %tmp.29;
+        %tmp.31 = dup %tmp.30;
+        bf %tmp.31 @_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_72_15_72_69_end;
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_72_15_72_69_true:
+        symbol [ power3sHistory %tmp.33 72 16 30 ];
+        %tmp.33 = getv ? :power3sHistory;
+        %tmp.34 = lgetv %i.3;
+        symbol [ i %tmp.34 72 31 32 ];
+        %tmp.35 = agetv %tmp.33 %tmp.34;
+        %tmp.36 = as %tmp.35 Lang.Array;
+        symbol [ Lang %tmp.36 72 37 41 ];
+        symbol [ Array %tmp.36 72 42 47 ];
+        %tmp.37 = 0;
+        %tmp.38 = agetv %tmp.36 %tmp.37;
+        %tmp.39 = as %tmp.38 Lang.Number;
+        symbol [ Lang %tmp.39 72 55 59 ];
+        symbol [ Number %tmp.39 72 60 66 ];
+        %tmp.40 = lgetv %cutoff.2;
+        symbol [ cutoff %tmp.40 72 69 75 ];
+        %tmp.41 = lt %tmp.39 %tmp.40;
+        %tmp.42 = and %tmp.30 %tmp.41;
+        push %tmp.42;
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_72_15_72_69_end:
+        %tmp.43 = phi [%tmp.31 @_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_71_15_72_69_begin] [%tmp.42 @_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_72_15_72_69_true] [%tmp.43 @_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_72_15_72_69_end];
+        bf %tmp.43 @_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_71_8_74_8_while_end;
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_71_8_74_8_while_begin:
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_72_77_74_8_start:
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 73 12 ]
+        %tmp.46 = lgetv %i.3;
+        symbol [ i %tmp.46 73 12 13 ];
+        %tmp.47 = add %tmp.46 1;
+        lputv %i.3 %tmp.47;
+        symbol [ i %i.3 73 12 13 ];
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_72_77_74_8_stop:
+        goto @_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_71_8_74_8_while_test;
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_71_8_74_8_while_end:
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 75 8 ]
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_75_8_77_8_if_stmt:
+        %tmp.48 = lgetv %i.3;
+        symbol [ i %tmp.48 75 12 13 ];
+        %tmp.49 = 0;
+        %tmp.50 = gt %tmp.48 %tmp.49;
+        bf %tmp.50 @_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_75_8_77_8_if_end;
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_75_8_77_8_if_true:
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_75_19_77_8_start:
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 76 12 ]
+        symbol [ power3sHistory %tmp.52 76 29 43 ];
+        %tmp.52 = getv ? :power3sHistory;
+        symbol [ slice %tmp.53 76 44 49 ];
+        %tmp.53 = getv function %tmp.52 :slice;
+        %tmp.54 = lgetv %i.3;
+        symbol [ i %tmp.54 76 50 51 ];
+        %tmp.55 = null;
+        %tmp.56 = invoke %tmp.52 %tmp.53(%tmp.54, %tmp.55);
+        symbol [ power3sHistory ? 76 12 26 ];
+        putv self :power3sHistory %tmp.56;
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_75_19_77_8_stop:
+        goto @_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_75_8_77_8_if_end;
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_75_8_77_8_if_end:
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_60_58_78_4_stop:
     }
 }
-[ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 72; @symbol_functiondef = [getApp,72,9,15]; @symbol_return<0> = [PaddlePowerApp,72,21,35]; ]
+[ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 82; @symbol_functiondef = [getApp,82,9,15]; @symbol_return<0> = [PaddlePowerApp,82,21,35]; ]
 function getApp() as PaddlePowerApp {
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_72_36_74_0_start:
-[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 73 4 ]
-    symbol [ Application %tmp.1 73 11 22 ];
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_82_36_84_0_start:
+[ "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc" 83 4 ]
+    symbol [ Application %tmp.1 83 11 22 ];
     %tmp.1 = getm $.Toybox.Application;
-    symbol [ getApp %tmp.2 73 23 29 ];
+    symbol [ getApp %tmp.2 83 23 29 ];
     %tmp.2 = getv function %tmp.1 :getApp;
     %tmp.3 = invoke %tmp.1 %tmp.2();
     %tmp.4 = as %tmp.3 PaddlePowerApp;
-    symbol [ PaddlePowerApp %tmp.4 73 35 49 ];
+    symbol [ PaddlePowerApp %tmp.4 83 35 49 ];
     ret %tmp.4;
-_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_72_36_74_0_stop:
+_home_gavinok_code_other_power_connect_iq_power_source_PaddlePowerApp_mc_82_36_84_0_stop:
 }
 [ @file = "/home/gavinok/code/other/power/connect_iq_power/source/PaddlePowerApp.mc"; @line = 1; ]
 <init> {

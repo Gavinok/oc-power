@@ -1,17 +1,19 @@
 import Toybox.Application;
 import Toybox.BluetoothLowEnergy;
 import Toybox.Lang;
+import Toybox.System;
 import Toybox.WatchUi;
 
 class PaddlePowerApp extends Application.AppBase {
 
     // Shared power metrics (read by PaddlePowerView.compute())
-    var currentPower as Lang.Number  = 0;
-    var totalPower   as Lang.Long    = 0l;
-    var readingCount as Lang.Number  = 0;
-    var power3sBuffer as Lang.Array  = [0, 0, 0] as Lang.Array<Lang.Number>;
-    var bufferIndex  as Lang.Number  = 0;
-    var bleStatus    as Lang.String  = "Scanning";
+    var currentPower  as Lang.Number = 0;
+    var totalPower    as Lang.Long   = 0l;
+    var readingCount  as Lang.Number = 0;
+    // Time-stamped history for a true 3-second rolling average.
+    // Each entry is [timestamp_ms as Number, watts as Number].
+    var power3sHistory as Lang.Array = [] as Lang.Array;
+    var bleStatus     as Lang.String = "Scanning";
 
     private var _bleDelegate as PowerBleDelegate?;
 
@@ -56,15 +58,23 @@ class PaddlePowerApp extends Application.AppBase {
 
     // Called by PowerBleDelegate when a new power reading arrives
     function onPowerReading(watts as Lang.Number) as Void {
-        currentPower = watts;
-
-        // Session average accumulation
+        currentPower  = watts;
         totalPower   += watts;
         readingCount += 1;
 
-        // 3-second rolling buffer (circular)
-        power3sBuffer[bufferIndex] = watts;
-        bufferIndex = (bufferIndex + 1) % 3;
+        // Append timestamped reading, then drop anything older than 3 s
+        var now = System.getTimer();
+        power3sHistory.add([now, watts] as Lang.Array);
+
+        var cutoff = now - 3000;
+        var i = 0;
+        while (i < power3sHistory.size() &&
+               (power3sHistory[i] as Lang.Array)[0] as Lang.Number < cutoff) {
+            i++;
+        }
+        if (i > 0) {
+            power3sHistory = power3sHistory.slice(i, null);
+        }
     }
 }
 

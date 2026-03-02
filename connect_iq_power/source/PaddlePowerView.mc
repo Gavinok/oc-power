@@ -25,16 +25,12 @@ class PaddlePowerView extends WatchUi.DataField {
         _bleStatus    = app.bleStatus;
         _connected    = (app.bleStatus.equals("Connected"));
 
-        // 3-second rolling average (non-zero entries only)
-        var buf   = app.power3sBuffer;
-        var sum   = 0;
-        var count = 0;
-        for (var i = 0; i < buf.size(); i++) {
-            var v = buf[i] as Lang.Number;
-            if (v > 0) {
-                sum   += v;
-                count += 1;
-            }
+        // True 3-second rolling average from time-stamped history
+        var history = app.power3sHistory;
+        var sum     = 0;
+        var count   = history.size();
+        for (var i = 0; i < count; i++) {
+            sum += (history[i] as Lang.Array)[1] as Lang.Number;
         }
         _avg3sPower = (count > 0) ? (sum / count) : 0;
 
