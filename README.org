@@ -130,3 +130,8 @@ Join =PowerMeter= normally and open =http://192.168.4.1= in Safari. If prompted 
 * Clangd Support
 
 The project includes a =.clangd= file that points to the build directory for code completion. Run =idf.py build= at least once to generate =compile_commands.json=.
+
+* Quick compile run etc
+#+begin_src bash
+cd ./power_meter/ && find main -name '*.[ch]' | xargs clang-format -i  && source /opt/esp-idf/export.sh &&  idf.py build monitor idf.py flash monitor
+#+end_src
