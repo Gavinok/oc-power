@@ -20,12 +20,13 @@ typedef enum {
 
 typedef struct {
     stroke_phase_t phase;
-    int64_t stroke_start_us;     /* Time catch began */
-    int64_t recovery_start_us;   /* Time recovery began */
-    float   peak_accel_g;        /* Peak acceleration during pull */
-    float   stroke_duration_s;   /* Duration of last complete stroke */
-    float   stroke_rate_spm;     /* Strokes per minute (rolling) */
-    int     stroke_count;        /* Total strokes detected */
+    int64_t stroke_start_us;      /* Time catch began (current stroke) */
+    int64_t prev_stroke_start_us; /* Time catch began (previous stroke) */
+    int64_t recovery_start_us;    /* Time recovery began */
+    float   peak_accel_g;         /* Peak acceleration during pull */
+    float   stroke_duration_s;    /* Duration of last complete stroke */
+    float   stroke_rate_spm;      /* Strokes per minute (catch-to-catch period) */
+    int     stroke_count;         /* Total strokes detected */
 } stroke_state_t;
 
 void stroke_detector_init(stroke_state_t *state);

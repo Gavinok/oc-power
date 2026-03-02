@@ -23,6 +23,7 @@ int stroke_detector_update(stroke_state_t *state, float accel_g, int64_t ts_us) 
     case STROKE_PHASE_RECOVERY:
         if (accel_g > s_catch_g) {
             state->phase = STROKE_PHASE_CATCH;
+            state->prev_stroke_start_us = state->stroke_start_us;
             state->stroke_start_us = ts_us;
             state->peak_accel_g = accel_g;
             ESP_LOGD(TAG, "CATCH at %.3f g", accel_g);
@@ -59,7 +60,10 @@ int stroke_detector_update(stroke_state_t *state, float accel_g, int64_t ts_us) 
                 duration_us <= STROKE_MAX_DURATION_US) {
 
                 state->stroke_duration_s = duration_us / 1e6f;
-                state->stroke_rate_spm   = 60.0f / state->stroke_duration_s;
+                if (state->prev_stroke_start_us > 0) {
+                    float period_s = (state->stroke_start_us - state->prev_stroke_start_us) / 1e6f;
+                    state->stroke_rate_spm = 60.0f / period_s;
+                }
                 state->recovery_start_us = ts_us;
                 state->stroke_count++;
                 stroke_completed = 1;
@@ -69,7 +73,7 @@ int stroke_detector_update(stroke_state_t *state, float accel_g, int64_t ts_us) 
                          state->stroke_duration_s, state->stroke_rate_spm);
             }
             state->phase = STROKE_PHASE_RECOVERY;
-        } else if (accel_g > STROKE_CATCH_THRESHOLD_G) {
+        } else if (accel_g > s_catch_g) {
             /* Acceleration picked back up, back into pull */
             state->phase = STROKE_PHASE_PULL;
         }
