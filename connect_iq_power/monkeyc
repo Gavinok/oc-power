@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Wrapper around the Connect IQ monkeyc compiler.
+# Usage: ./monkeyc [extra monkeyc args]
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SDK=/home/gavinok/.Garmin/ConnectIQ/Sdks/connectiq-sdk-lin-8.4.1-2026-02-03-e9f77eeaa
+KEY="$SCRIPT_DIR/developer_key"
+
+exec "$SDK/bin/monkeyc" \
+  -f "$SCRIPT_DIR/monkey.jungle" \
+  -y "$KEY" \
+  "$@"
