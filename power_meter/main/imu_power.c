@@ -9,7 +9,7 @@
 #define TAG "IMU_POWER"
 
 static volatile bool s_verbose = false;
-static float s_mass_kg = TOTAL_MASS_KG;
+static volatile float s_mass_kg = TOTAL_MASS_KG;
 static float s_forward[3] = {FORWARD_AXIS_X, FORWARD_AXIS_Y, FORWARD_AXIS_Z};
 
 void imu_power_set_verbose(bool verbose) {
@@ -23,9 +23,6 @@ void imu_power_set_forward_axis(float x, float y, float z) {
   s_forward[1] = y;
   s_forward[2] = z;
 }
-
-/* Gravity constant (m/s^2). MPU6050 returns values in g, so 1.0. */
-#define GRAVITY_G 1.0f
 
 /* Dot product of two 3D vectors */
 static float dot3(const float a[3], const float b[3]) {
@@ -43,8 +40,12 @@ static bool normalize3(float v[3]) {
   return true;
 }
 
+/* Acceleration stddev above which calibration is considered motion-corrupted */
+#define CALIBRATION_STDDEV_WARN_G 0.05f
+
 void imu_calibrate(imu_calibration_t* cal, mpu6050_handle_t mpu) {
   float sum[3] = {0, 0, 0};
+  float sum_sq[3] = {0, 0, 0};
   int count = 0;
 
   ESP_LOGI(TAG, "Gravity calibration: hold still for 2 seconds...");
@@ -55,6 +56,9 @@ void imu_calibrate(imu_calibration_t* cal, mpu6050_handle_t mpu) {
       sum[0] += acce.acce_x;
       sum[1] += acce.acce_y;
       sum[2] += acce.acce_z;
+      sum_sq[0] += acce.acce_x * acce.acce_x;
+      sum_sq[1] += acce.acce_y * acce.acce_y;
+      sum_sq[2] += acce.acce_z * acce.acce_z;
       count++;
     }
     vTaskDelay(pdMS_TO_TICKS(50)); /* 20 Hz */
@@ -71,6 +75,18 @@ void imu_calibrate(imu_calibration_t* cal, mpu6050_handle_t mpu) {
   cal->gravity[1] = sum[1] / count;
   cal->gravity[2] = sum[2] / count;
 
+  /* Check for motion corruption: variance = E[x^2] - E[x]^2, summed over axes */
+  float total_variance = 0.0f;
+  for (int i = 0; i < 3; i++) {
+    float mean = cal->gravity[i];
+    total_variance += (sum_sq[i] / count) - (mean * mean);
+  }
+  float stddev = sqrtf(total_variance);
+  if (stddev > CALIBRATION_STDDEV_WARN_G) {
+    ESP_LOGW(TAG, "Calibration may be corrupted: stddev=%.3f g (threshold=%.2f g) — was device moving?",
+             stddev, CALIBRATION_STDDEV_WARN_G);
+  }
+
   ESP_LOGI(TAG, "Gravity vector before normalize: x=%.3f y=%.3f z=%.3f", cal->gravity[0],
            cal->gravity[1], cal->gravity[2]);
 
@@ -85,9 +101,8 @@ void imu_calibrate(imu_calibration_t* cal, mpu6050_handle_t mpu) {
            cal->gravity[1], cal->gravity[2]);
 }
 
-void imu_power_init(imu_power_state_t* state, float mass_kg) {
+void imu_power_init(imu_power_state_t* state) {
   memset(state, 0, sizeof(*state));
-  state->mass_kg = mass_kg;
 }
 
 void imu_power_update(imu_power_state_t* state,

@@ -23,8 +23,6 @@ typedef struct {
 } imu_calibration_t;
 
 typedef struct {
-  float mass_kg;
-
   /* Drag force estimate, smoothed during recovery (N).
    * Reserved for future GPS-fusion work; not used in power calculation yet. */
   float drag_force_n;
@@ -49,7 +47,7 @@ typedef struct {
  * Logs progress to serial. Must complete before imu_power_update() is called. */
 void imu_calibrate(imu_calibration_t* cal, mpu6050_handle_t mpu);
 
-void imu_power_init(imu_power_state_t* state, float mass_kg);
+void imu_power_init(imu_power_state_t* state);
 
 /* Feed one accelerometer sample into the power estimator.
  *   acce        - raw reading from mpu6050_get_acce()

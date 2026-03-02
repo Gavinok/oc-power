@@ -141,7 +141,7 @@ static void power_update_task(void* param) {
   imu_power_state_t power = {0};
 
   stroke_detector_init(&stroke);
-  imu_power_init(&power, TOTAL_MASS_KG);
+  imu_power_init(&power);
 
   /* Run gravity calibration. Device must be still for ~2 seconds. */
   imu_calibrate(&cal, mpu);
