@@ -70,7 +70,7 @@ static void nimble_host_config_init(void) {
   ble_store_config_init();
 }
 
-static void nimble_host_task(void *param) {
+static void nimble_host_task(void* param) {
   ESP_LOGI(TAG, "NimBLE host task started");
   nimble_port_run();
   vTaskDelete(NULL);
@@ -80,7 +80,7 @@ static void nimble_host_task(void *param) {
 
 static volatile bool s_recalibrate = false;
 
-static void on_ws_command(const char *cmd) {
+static void on_ws_command(const char* cmd) {
   if (strcmp(cmd, "recalibrate") == 0) {
     s_recalibrate = true;
     ESP_LOGI(TAG, "Recalibration requested via browser");
@@ -99,7 +99,7 @@ static void on_ws_command(const char *cmd) {
       ESP_LOGI(TAG, "Mass set to %.1f kg", kg);
     }
   } else if (strncmp(cmd, "set:axis:", 9) == 0) {
-    const char *ax = cmd + 9;
+    const char* ax = cmd + 9;
     float x = 0.0f, y = 0.0f, z = 0.0f;
     if (strcmp(ax, "+X") == 0)
       x = 1.0f;
@@ -134,7 +134,7 @@ static void on_ws_command(const char *cmd) {
   }
 }
 
-static void power_update_task(void *param) {
+static void power_update_task(void* param) {
   mpu6050_handle_t mpu = (mpu6050_handle_t)param;
   stroke_state_t stroke = {0};
   imu_calibration_t cal = {0};
@@ -166,8 +166,8 @@ static void power_update_task(void *param) {
       last_sample_us = now;
 
       /* Compute acceleration magnitude for stroke detection */
-      float mag = sqrtf(acce.acce_x * acce.acce_x + acce.acce_y * acce.acce_y +
-                        acce.acce_z * acce.acce_z);
+      float mag =
+          sqrtf(acce.acce_x * acce.acce_x + acce.acce_y * acce.acce_y + acce.acce_z * acce.acce_z);
       float dynamic_g = fabsf(mag - 1.0f);
 
       /* Update stroke detector */
@@ -196,14 +196,13 @@ static void power_update_task(void *param) {
 
 #else
 
-static void power_update_task(void *param) {
+static void power_update_task(void* param) {
   ESP_LOGI(TAG, "Sine wave demo started (%d Hz)", POWER_UPDATE_RATE_HZ);
 
   while (1) {
     double time_sec = esp_timer_get_time() / 1000000.0;
     double angle = (2.0 * M_PI * time_sec) / POWER_CYCLE_SECONDS;
-    int16_t power =
-        POWER_BASE_WATTS + (int16_t)(POWER_AMPLITUDE_WATTS * sin(angle));
+    int16_t power = POWER_BASE_WATTS + (int16_t)(POWER_AMPLITUDE_WATTS * sin(angle));
     send_power_notification(power);
     vTaskDelay(pdMS_TO_TICKS(POWER_UPDATE_PERIOD_MS));
   }
@@ -217,13 +216,11 @@ void app_main(void) {
   esp_err_t ret;
   int rc = 0;
 
-  ESP_LOGI(TAG, "Initializing BLE Cycling Power Meter (USE_IMU_POWER=%d)",
-           USE_IMU_POWER);
+  ESP_LOGI(TAG, "Initializing BLE Cycling Power Meter (USE_IMU_POWER=%d)", USE_IMU_POWER);
 
   /* Initialize NVS flash (required by BLE stack) */
   ret = nvs_flash_init();
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
-      ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
     ESP_ERROR_CHECK(nvs_flash_erase());
     ret = nvs_flash_init();
   }
@@ -242,7 +239,7 @@ void app_main(void) {
       .scl_pullup_en = GPIO_PULLUP_ENABLE,
       .master.clk_speed = I2C_FREQ_HZ,
   };
-  ESP_ERROR_CHECK(i2c_param_config(I2C_PORT, &aconf));
+  ESP_ERROR_CHECK(i2c_param_config(I2C_PORT, &conf));
   ESP_ERROR_CHECK(i2c_driver_install(I2C_PORT, I2C_MODE_MASTER, 0, 0, 0));
 
   mpu6050_handle_t mpu = mpu6050_create(I2C_PORT, MPU6050_I2C_ADDRESS);
@@ -264,8 +261,7 @@ void app_main(void) {
   uint8_t dlpf_cfg = 0x05;
   i2c_cmd_handle_t cmd = i2c_cmd_link_create();
   i2c_master_start(cmd);
-  i2c_master_write_byte(cmd, (MPU6050_I2C_ADDRESS << 1) | I2C_MASTER_WRITE,
-                        true);
+  i2c_master_write_byte(cmd, (MPU6050_I2C_ADDRESS << 1) | I2C_MASTER_WRITE, true);
   i2c_master_write_byte(cmd, 0x1A, true); /* CONFIG register */
   i2c_master_write_byte(cmd, dlpf_cfg, true);
   i2c_master_stop(cmd);

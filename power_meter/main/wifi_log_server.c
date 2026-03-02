@@ -1,4 +1,7 @@
 #include "wifi_log_server.h"
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
 #include "esp_event.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
@@ -8,9 +11,6 @@
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
-#include <stdarg.h>
-#include <stdlib.h>
-#include <string.h>
 
 #define TAG "WIFI_LOG"
 #define LOG_BUF_SIZE 256   /* max chars per log line (truncated if longer) */
@@ -31,7 +31,7 @@ static const char HTML_PAGE[] =
     "button{margin-right:6px;padding:4px 12px;cursor:pointer}"
     "button.on{color:#ff0;border-color:#ff0}"
     "#settings{display:none;position:fixed;top:40px;left:0;right:0;background:#1a1a1a;"
-             "padding:10px 8px;border-bottom:1px solid #444;z-index:2}"
+    "padding:10px 8px;border-bottom:1px solid #444;z-index:2}"
     "#settings label{margin-right:14px;white-space:nowrap}"
     "#settings input{width:60px;background:#333;color:#0f0;border:1px solid #555;padding:2px 4px}"
     "#settings select{background:#333;color:#0f0;border:1px solid #555;padding:2px}"
@@ -47,14 +47,17 @@ static const char HTML_PAGE[] =
     "<button onclick=\"toggleSettings()\">Settings</button>"
     "</div>"
     "<div id='settings'>"
-    "<label>Mass (kg):<input id='sm' type='number' step='1' min='10' max='500' value='100'></label> "
+    "<label>Mass (kg):<input id='sm' type='number' step='1' min='10' max='500' "
+    "value='100'></label> "
     "<label>Axis:<select id='sa'>"
     "<option>+X</option><option>-X</option>"
     "<option selected>+Y</option><option>-Y</option>"
     "<option>+Z</option><option>-Z</option>"
     "</select></label> "
-    "<label>Catch (g):<input id='sc' type='number' step='0.01' min='0.05' max='2.00' value='0.30'></label> "
-    "<label>Recov (g):<input id='sr' type='number' step='0.01' min='0.01' max='1.00' value='0.10'></label> "
+    "<label>Catch (g):<input id='sc' type='number' step='0.01' min='0.05' max='2.00' "
+    "value='0.30'></label> "
+    "<label>Recov (g):<input id='sr' type='number' step='0.01' min='0.01' max='1.00' "
+    "value='0.10'></label> "
     "<button onclick=\"applySettings()\">Apply</button>"
     "</div>"
     "<div id='log'></div>"
@@ -93,9 +96,11 @@ static vprintf_like_t s_orig_vprintf;
 static ws_command_cb_t s_command_cb;
 static char s_connect_status[64];
 
-void wifi_log_server_set_command_cb(ws_command_cb_t cb) { s_command_cb = cb; }
+void wifi_log_server_set_command_cb(ws_command_cb_t cb) {
+  s_command_cb = cb;
+}
 
-void wifi_log_server_set_status(const char *msg) {
+void wifi_log_server_set_status(const char* msg) {
   strlcpy(s_connect_status, msg ? msg : "", sizeof(s_connect_status));
 }
 
@@ -126,7 +131,7 @@ static void fd_remove(int fd) {
 /* ---- vprintf hook ---- */
 /* Called from any task context; must be fast and non-blocking. */
 
-static int log_vprintf_hook(const char *fmt, va_list args) {
+static int log_vprintf_hook(const char* fmt, va_list args) {
   /* Preserve original UART output */
   va_list args2;
   va_copy(args2, args);
@@ -149,7 +154,7 @@ static int log_vprintf_hook(const char *fmt, va_list args) {
 /* ---- sender task ---- */
 /* Drains the log queue and broadcasts each line to all connected WS clients. */
 
-static void log_sender_task(void *arg) {
+static void log_sender_task(void* arg) {
   log_entry_t entry;
   while (1) {
     if (xQueueReceive(s_log_queue, &entry, portMAX_DELAY) != pdTRUE)
@@ -157,7 +162,7 @@ static void log_sender_task(void *arg) {
 
     httpd_ws_frame_t frame = {
         .type = HTTPD_WS_TYPE_TEXT,
-        .payload = (uint8_t *)entry.data,
+        .payload = (uint8_t*)entry.data,
         .len = (size_t)entry.len,
         .final = true,
     };
@@ -178,12 +183,12 @@ static void log_sender_task(void *arg) {
 
 /* ---- HTTP handlers ---- */
 
-static esp_err_t root_handler(httpd_req_t *req) {
+static esp_err_t root_handler(httpd_req_t* req) {
   httpd_resp_set_type(req, "text/html");
   return httpd_resp_send(req, HTML_PAGE, HTTPD_RESP_USE_STRLEN);
 }
 
-static esp_err_t ws_handler(httpd_req_t *req) {
+static esp_err_t ws_handler(httpd_req_t* req) {
   if (req->method == HTTP_GET) {
     /* New WebSocket client. httpd handles the upgrade; record the fd. */
     int fd = httpd_req_to_sockfd(req);
@@ -194,7 +199,7 @@ static esp_err_t ws_handler(httpd_req_t *req) {
     if (s_connect_status[0]) {
       httpd_ws_frame_t sf = {
           .type = HTTPD_WS_TYPE_TEXT,
-          .payload = (uint8_t *)s_connect_status,
+          .payload = (uint8_t*)s_connect_status,
           .len = strlen(s_connect_status),
           .final = true,
       };
@@ -210,12 +215,12 @@ static esp_err_t ws_handler(httpd_req_t *req) {
     return ret;
 
   if (frame.type == HTTPD_WS_TYPE_TEXT && frame.len > 0) {
-    uint8_t *buf = calloc(1, frame.len + 1);
+    uint8_t* buf = calloc(1, frame.len + 1);
     if (buf) {
       frame.payload = buf;
       ret = httpd_ws_recv_frame(req, &frame, frame.len);
       if (ret == ESP_OK && s_command_cb) {
-        s_command_cb((const char *)buf);
+        s_command_cb((const char*)buf);
       }
       free(buf);
     }
@@ -229,11 +234,10 @@ static esp_err_t ws_handler(httpd_req_t *req) {
 
 /* ---- public API ---- */
 
-void wifi_log_server_start(const char *ssid, const char *password) {
+void wifi_log_server_start(const char* ssid, const char* password) {
   /* Init fd list */
   s_fd_mutex = xSemaphoreCreateMutex();
-  for (int i = 0; i < MAX_WS_CLIENTS; i++)
-    s_ws_fds[i] = -1;
+  for (int i = 0; i < MAX_WS_CLIENTS; i++) s_ws_fds[i] = -1;
 
   /* Log queue */
   s_log_queue = xQueueCreate(LOG_QUEUE_DEPTH, sizeof(log_entry_t));
@@ -253,14 +257,13 @@ void wifi_log_server_start(const char *ssid, const char *password) {
       .ap =
           {
               .max_connection = MAX_WS_CLIENTS,
-              .authmode = (password && strlen(password)) ? WIFI_AUTH_WPA2_PSK
-                                                         : WIFI_AUTH_OPEN,
+              .authmode = (password && strlen(password)) ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN,
           },
   };
-  strlcpy((char *)ap_cfg.ap.ssid, ssid, sizeof(ap_cfg.ap.ssid));
+  strlcpy((char*)ap_cfg.ap.ssid, ssid, sizeof(ap_cfg.ap.ssid));
   ap_cfg.ap.ssid_len = (uint8_t)strlen(ssid);
   if (password && strlen(password)) {
-    strlcpy((char *)ap_cfg.ap.password, password, sizeof(ap_cfg.ap.password));
+    strlcpy((char*)ap_cfg.ap.password, password, sizeof(ap_cfg.ap.password));
   }
 
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));

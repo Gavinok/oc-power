@@ -15,4 +15,4 @@
 void adv_init(void);
 int gap_init(void);
 
-#endif // GAP_H
+#endif  // GAP_H
