@@ -1,5 +1,6 @@
 import Toybox.Activity;
 import Toybox.Application;
+import Toybox.FitContributor;
 import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.WatchUi;
@@ -12,6 +13,12 @@ class PaddlePowerView extends WatchUi.DataField {
     private var _sessionAvg   as Lang.Number = 0;
     private var _bleStatus    as Lang.String = "Scanning";
     private var _connected    as Lang.Boolean = false;
+
+    // FIT contributor fields — created on first compute() while an activity is recording.
+    // Field IDs must be unique within this app (0-based developer field indices).
+    private var _fitPower      as FitContributor.Field? = null;
+    private var _fitAvg3s      as FitContributor.Field? = null;
+    private var _fitSessionAvg as FitContributor.Field? = null;
 
     function initialize() {
         DataField.initialize();
@@ -39,6 +46,29 @@ class PaddlePowerView extends WatchUi.DataField {
             _sessionAvg = (app.totalPower / app.readingCount).toNumber();
         } else {
             _sessionAvg = 0;
+        }
+
+        // FIT contribution — lazy-create fields on first call during a recording.
+        // createField() returns null when no activity is active; setData() is skipped.
+        if (_fitPower == null) {
+            _fitPower = createField(
+                "Power", 0, FitContributor.DATA_TYPE_SINT16,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "w"}
+            );
+            _fitAvg3s = createField(
+                "3s Avg Power", 1, FitContributor.DATA_TYPE_SINT16,
+                {:mesgType => FitContributor.MESG_TYPE_RECORD, :units => "w"}
+            );
+            _fitSessionAvg = createField(
+                "Avg Power", 2, FitContributor.DATA_TYPE_SINT16,
+                {:mesgType => FitContributor.MESG_TYPE_SESSION, :units => "w"}
+            );
+        }
+
+        if (_fitPower != null) {
+            (_fitPower as FitContributor.Field).setData(_currentPower);
+            (_fitAvg3s as FitContributor.Field).setData(_avg3sPower);
+            (_fitSessionAvg as FitContributor.Field).setData(_sessionAvg);
         }
     }
 
