@@ -58,6 +58,8 @@ static const char HTML_PAGE[] =
     "value='0.30'></label> "
     "<label>Recov (g):<input id='sr' type='number' step='0.01' min='0.01' max='1.00' "
     "value='0.10'></label> "
+    "<label>Smooth (strokes):<input id='ss' type='number' step='1' min='1' max='8' "
+    "value='3'></label> "
     "<button onclick=\"applySettings()\">Apply</button>"
     "</div>"
     "<div id='log'></div>"
@@ -79,7 +81,8 @@ static const char HTML_PAGE[] =
     "ws.send('set:mass:'+document.getElementById('sm').value);"
     "ws.send('set:axis:'+document.getElementById('sa').value);"
     "ws.send('set:catch:'+parseFloat(document.getElementById('sc').value).toFixed(3));"
-    "ws.send('set:recovery:'+parseFloat(document.getElementById('sr').value).toFixed(3));}"
+    "ws.send('set:recovery:'+parseFloat(document.getElementById('sr').value).toFixed(3));"
+    "ws.send('set:smooth:'+parseInt(document.getElementById('ss').value));}"
     "</script></body></html>";
 
 /* ---- state ---- */

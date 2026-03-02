@@ -8,22 +8,6 @@
 
 #define TAG "IMU_POWER"
 
-static volatile bool s_verbose = false;
-static volatile float s_mass_kg = TOTAL_MASS_KG;
-static float s_forward[3] = {FORWARD_AXIS_X, FORWARD_AXIS_Y, FORWARD_AXIS_Z};
-
-void imu_power_set_verbose(bool verbose) {
-  s_verbose = verbose;
-}
-void imu_power_set_mass(float mass_kg) {
-  s_mass_kg = mass_kg;
-}
-void imu_power_set_forward_axis(float x, float y, float z) {
-  s_forward[0] = x;
-  s_forward[1] = y;
-  s_forward[2] = z;
-}
-
 /* Dot product of two 3D vectors */
 static float dot3(const float a[3], const float b[3]) {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -83,7 +67,8 @@ void imu_calibrate(imu_calibration_t* cal, mpu6050_handle_t mpu) {
   }
   float stddev = sqrtf(total_variance);
   if (stddev > CALIBRATION_STDDEV_WARN_G) {
-    ESP_LOGW(TAG, "Calibration may be corrupted: stddev=%.3f g (threshold=%.2f g) — was device moving?",
+    ESP_LOGW(TAG,
+             "Calibration may be corrupted: stddev=%.3f g (threshold=%.2f g) — was device moving?",
              stddev, CALIBRATION_STDDEV_WARN_G);
   }
 
@@ -103,6 +88,11 @@ void imu_calibrate(imu_calibration_t* cal, mpu6050_handle_t mpu) {
 
 void imu_power_init(imu_power_state_t* state) {
   memset(state, 0, sizeof(*state));
+  state->mass_kg = TOTAL_MASS_KG;
+  state->forward[0] = FORWARD_AXIS_X;
+  state->forward[1] = FORWARD_AXIS_Y;
+  state->forward[2] = FORWARD_AXIS_Z;
+  state->verbose = false;
 }
 
 void imu_power_update(imu_power_state_t* state,
@@ -116,11 +106,7 @@ void imu_power_update(imu_power_state_t* state,
   if (!cal->calibrated || dt_s <= 0.0f)
     return;
 
-  /* Forward unit vector — copy atomically to avoid a torn read from a concurrent write */
-  float forward[3];
-  forward[0] = s_forward[0];
-  forward[1] = s_forward[1];
-  forward[2] = s_forward[2];
+  const float* forward = state->forward;
 
   /* Raw reading as array for dot products */
   const float raw[3] = {acce->acce_x, acce->acce_y, acce->acce_z};
@@ -139,7 +125,7 @@ void imu_power_update(imu_power_state_t* state,
   /* Convert g to m/s^2 */
   float a_forward_ms2 = a_forward_g * 9.81f;
 
-  if (s_verbose) {
+  if (state->verbose) {
     static const char* const phase_names[] = {"RECOVERY", "CATCH", "PULL", "RELEASE"};
     ESP_LOGI(TAG, "acce x=%.3f y=%.3f z=%.3f | a_fwd=%.3f m/s^2 | phase=%s | dv=%.3f m/s dt=%.2f s",
              acce->acce_x, acce->acce_y, acce->acce_z, a_forward_ms2, phase_names[stroke_phase],
@@ -166,14 +152,14 @@ void imu_power_update(imu_power_state_t* state,
       (stroke_phase == STROKE_PHASE_RELEASE && state->prev_phase != STROKE_PHASE_RELEASE);
   if (stroke_ending && state->stroke_dt_s > 0.0f) {
     float dv = state->stroke_delta_v_ms;
-    state->avg_stroke_power_w = 0.5f * s_mass_kg * dv * dv / state->stroke_dt_s;
+    state->avg_stroke_power_w = 0.5f * state->mass_kg * dv * dv / state->stroke_dt_s;
     ESP_LOGI(TAG, "Stroke: delta_v=%.3f m/s  dur=%.2f s  power=%.1f W", dv, state->stroke_dt_s,
              state->avg_stroke_power_w);
   }
 
   /* Drag estimation during recovery (kept for future GPS fusion) */
   if (stroke_phase == STROKE_PHASE_RECOVERY && a_forward_ms2 < 0.0f) {
-    float drag_estimate = -s_mass_kg * a_forward_ms2;
+    float drag_estimate = -state->mass_kg * a_forward_ms2;
     state->drag_force_n = 0.9f * state->drag_force_n + 0.1f * drag_estimate;
   }
 

@@ -23,6 +23,11 @@ typedef enum {
 #define STROKE_RATE_SMOOTH_DEFAULT 3
 
 typedef struct {
+  /* Settings — owned exclusively by the IMU task, updated via settings queue */
+  float catch_g;      /* Catch threshold (g) */
+  float recovery_g;   /* Recovery threshold (g) */
+  int smooth_strokes; /* Rate smoothing window (strokes) */
+
   stroke_phase_t phase;
   int64_t stroke_start_us;      /* Time catch began (current stroke) */
   int64_t prev_stroke_start_us; /* Time catch began (previous stroke) */
@@ -33,20 +38,14 @@ typedef struct {
   int stroke_count;             /* Total strokes detected */
   /* Rolling period buffer for stroke rate smoothing */
   float period_buf[STROKE_RATE_MAX_SMOOTH];
-  int period_buf_idx;           /* Next write position (circular) */
-  int period_buf_count;         /* Number of valid entries */
+  int period_buf_idx;   /* Next write position (circular) */
+  int period_buf_count; /* Number of valid entries */
 } stroke_state_t;
 
 void stroke_detector_init(stroke_state_t* state);
 
-/* Update the catch and recovery thresholds (in g).
- * Defaults: STROKE_CATCH_THRESHOLD_G / STROKE_RECOVERY_THRESHOLD_G. */
-void stroke_detector_set_catch_threshold(float catch_g);
-void stroke_detector_set_recovery_threshold(float recovery_g);
-
-/* Set the number of strokes to average for stroke rate (1–STROKE_RATE_MAX_SMOOTH).
- * Default: STROKE_RATE_SMOOTH_DEFAULT. */
-void stroke_detector_set_smooth_strokes(int n);
+/* Settings (catch_g, recovery_g, smooth_strokes) live in stroke_state_t and are
+ * updated directly by the owning task from the settings queue. */
 
 /* Feed one acceleration sample (magnitude in g, timestamp in microseconds).
  * Returns 1 if a stroke just completed, 0 otherwise. */

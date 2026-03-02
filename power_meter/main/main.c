@@ -12,6 +12,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 #include "freertos/task.h"
 #include "nvs_flash.h"
 
@@ -78,60 +79,150 @@ static void nimble_host_task(void* param) {
 
 #if USE_IMU_POWER
 
-static volatile bool s_recalibrate = false;
+/* ── Inter-task message types ────────────────────────────────────────────── */
+
+typedef enum {
+  SETTING_MASS,
+  SETTING_FORWARD_AXIS,
+  SETTING_CATCH_G,
+  SETTING_RECOVERY_G,
+  SETTING_VERBOSE,
+  SETTING_CALIBRATE,
+  SETTING_SMOOTH_STROKES,
+} settings_type_t;
+
+typedef struct {
+  settings_type_t type;
+  union {
+    float f;     /* MASS, CATCH_G, RECOVERY_G */
+    bool b;      /* VERBOSE */
+    int i;       /* SMOOTH_STROKES */
+    float v3[3]; /* FORWARD_AXIS */
+  };
+} settings_msg_t;
+
+typedef struct {
+  float power_w;
+  float stroke_rate_spm;
+  uint32_t stroke_count;
+} power_reading_t;
+
+static QueueHandle_t s_settings_queue;
+static QueueHandle_t s_power_queue;
+
+static void enqueue_setting(const settings_msg_t* msg) {
+  if (xQueueSend(s_settings_queue, msg, pdMS_TO_TICKS(10)) != pdTRUE) {
+    ESP_LOGW(TAG, "Settings queue full — message dropped");
+  }
+}
 
 static void on_ws_command(const char* cmd) {
+  settings_msg_t msg = {0};
+
   if (strcmp(cmd, "recalibrate") == 0) {
-    s_recalibrate = true;
+    msg.type = SETTING_CALIBRATE;
+    enqueue_setting(&msg);
     ESP_LOGI(TAG, "Recalibration requested via browser");
+
   } else if (strcmp(cmd, "verbose:on") == 0) {
-    imu_power_set_verbose(true);
+    msg.type = SETTING_VERBOSE;
+    msg.b = true;
+    enqueue_setting(&msg);
     wifi_log_server_set_status("!verbose:on");
     ESP_LOGI(TAG, "Verbose IMU logging ON");
+
   } else if (strcmp(cmd, "verbose:off") == 0) {
-    imu_power_set_verbose(false);
+    msg.type = SETTING_VERBOSE;
+    msg.b = false;
+    enqueue_setting(&msg);
     wifi_log_server_set_status("!verbose:off");
     ESP_LOGI(TAG, "Verbose IMU logging OFF");
+
   } else if (strncmp(cmd, "set:mass:", 9) == 0) {
     float kg;
-    if (sscanf(cmd + 9, "%f", &kg) == 1 && kg > 0.0f) {
-      imu_power_set_mass(kg);
+    if (sscanf(cmd + 9, "%f", &kg) == 1) {
+      if (kg < 10.0f || kg > 500.0f) {
+        ESP_LOGW(TAG, "Mass %.1f kg out of range [10, 500], clamped", kg);
+        kg = kg < 10.0f ? 10.0f : 500.0f;
+      }
+      msg.type = SETTING_MASS;
+      msg.f = kg;
+      enqueue_setting(&msg);
       ESP_LOGI(TAG, "Mass set to %.1f kg", kg);
     }
+
   } else if (strncmp(cmd, "set:axis:", 9) == 0) {
     const char* ax = cmd + 9;
-    float x = 0.0f, y = 0.0f, z = 0.0f;
+    msg.type = SETTING_FORWARD_AXIS;
     if (strcmp(ax, "+X") == 0)
-      x = 1.0f;
+      msg.v3[0] = 1.0f;
     else if (strcmp(ax, "-X") == 0)
-      x = -1.0f;
+      msg.v3[0] = -1.0f;
     else if (strcmp(ax, "+Y") == 0)
-      y = 1.0f;
+      msg.v3[1] = 1.0f;
     else if (strcmp(ax, "-Y") == 0)
-      y = -1.0f;
+      msg.v3[1] = -1.0f;
     else if (strcmp(ax, "+Z") == 0)
-      z = 1.0f;
+      msg.v3[2] = 1.0f;
     else if (strcmp(ax, "-Z") == 0)
-      z = -1.0f;
+      msg.v3[2] = -1.0f;
     else {
       ESP_LOGW(TAG, "Unknown axis: %s", ax);
       return;
     }
-    imu_power_set_forward_axis(x, y, z);
+    enqueue_setting(&msg);
     ESP_LOGI(TAG, "Forward axis set to %s", ax);
+
   } else if (strncmp(cmd, "set:catch:", 10) == 0) {
     float g;
-    if (sscanf(cmd + 10, "%f", &g) == 1 && g > 0.0f) {
-      stroke_detector_set_catch_threshold(g);
+    if (sscanf(cmd + 10, "%f", &g) == 1) {
+      if (g < 0.05f || g > 5.0f) {
+        ESP_LOGW(TAG, "Catch threshold %.3f g out of range [0.05, 5.0], clamped", g);
+        g = g < 0.05f ? 0.05f : 5.0f;
+      }
+      msg.type = SETTING_CATCH_G;
+      msg.f = g;
+      enqueue_setting(&msg);
       ESP_LOGI(TAG, "Catch threshold set to %.3f g", g);
     }
+
   } else if (strncmp(cmd, "set:recovery:", 13) == 0) {
     float g;
-    if (sscanf(cmd + 13, "%f", &g) == 1 && g > 0.0f) {
-      stroke_detector_set_recovery_threshold(g);
+    if (sscanf(cmd + 13, "%f", &g) == 1) {
+      if (g < 0.05f || g > 5.0f) {
+        ESP_LOGW(TAG, "Recovery threshold %.3f g out of range [0.05, 5.0], clamped", g);
+        g = g < 0.05f ? 0.05f : 5.0f;
+      }
+      msg.type = SETTING_RECOVERY_G;
+      msg.f = g;
+      enqueue_setting(&msg);
       ESP_LOGI(TAG, "Recovery threshold set to %.3f g", g);
     }
+
+  } else if (strncmp(cmd, "set:smooth:", 11) == 0) {
+    int n;
+    if (sscanf(cmd + 11, "%d", &n) == 1) {
+      if (n < 1)
+        n = 1;
+      if (n > STROKE_RATE_MAX_SMOOTH)
+        n = STROKE_RATE_MAX_SMOOTH;
+      msg.type = SETTING_SMOOTH_STROKES;
+      msg.i = n;
+      enqueue_setting(&msg);
+      ESP_LOGI(TAG, "Stroke rate smoothing window set to %d strokes", n);
+    }
   }
+}
+
+static void ble_notify_task(void* param) {
+  power_reading_t reading = {0};
+  ESP_LOGI(TAG, "BLE notify task running (1 Hz keepalive)");
+  while (1) {
+    /* Block up to 1s for a new stroke reading; on timeout send last known value */
+    xQueueReceive(s_power_queue, &reading, pdMS_TO_TICKS(1000));
+    send_power_notification((int16_t)reading.power_w);
+  }
+  vTaskDelete(NULL);
 }
 
 static void power_update_task(void* param) {
@@ -142,21 +233,41 @@ static void power_update_task(void* param) {
 
   stroke_detector_init(&stroke);
   imu_power_init(&power);
-
-  /* Run gravity calibration. Device must be still for ~2 seconds. */
   imu_calibrate(&cal, mpu);
 
-  int ble_notify_counter = 0;
-  const int ble_notify_every = POWER_UPDATE_PERIOD_MS / IMU_SAMPLE_MS;
   int64_t last_sample_us = esp_timer_get_time();
-
-  ESP_LOGI(TAG, "IMU power task running (20Hz IMU, 10Hz BLE)");
+  ESP_LOGI(TAG, "IMU power task running at %d Hz", 1000 / IMU_SAMPLE_MS);
 
   while (1) {
-    if (s_recalibrate) {
-      s_recalibrate = false;
-      ESP_LOGI(TAG, "Recalibrating: hold device still...");
-      imu_calibrate(&cal, mpu);
+    /* Drain settings queue before processing the next sample */
+    settings_msg_t msg;
+    while (xQueueReceive(s_settings_queue, &msg, 0) == pdTRUE) {
+      switch (msg.type) {
+        case SETTING_MASS:
+          power.mass_kg = msg.f;
+          break;
+        case SETTING_FORWARD_AXIS:
+          power.forward[0] = msg.v3[0];
+          power.forward[1] = msg.v3[1];
+          power.forward[2] = msg.v3[2];
+          break;
+        case SETTING_CATCH_G:
+          stroke.catch_g = msg.f;
+          break;
+        case SETTING_RECOVERY_G:
+          stroke.recovery_g = msg.f;
+          break;
+        case SETTING_VERBOSE:
+          power.verbose = msg.b;
+          break;
+        case SETTING_CALIBRATE:
+          ESP_LOGI(TAG, "Recalibrating: hold device still...");
+          imu_calibrate(&cal, mpu);
+          break;
+        case SETTING_SMOOTH_STROKES:
+          stroke.smooth_strokes = msg.i;
+          break;
+      }
     }
 
     mpu6050_acce_value_t acce;
@@ -165,27 +276,26 @@ static void power_update_task(void* param) {
       float dt_s = (now - last_sample_us) / 1e6f;
       last_sample_us = now;
 
-      /* Compute acceleration magnitude for stroke detection */
       float mag =
           sqrtf(acce.acce_x * acce.acce_x + acce.acce_y * acce.acce_y + acce.acce_z * acce.acce_z);
       float dynamic_g = fabsf(mag - 1.0f);
 
-      /* Update stroke detector */
       int stroke_done = stroke_detector_update(&stroke, dynamic_g, now);
       if (stroke_done) {
-        /* Stroke completed, update cadence */
         power_service_update_crank(now);
       }
 
-      /* Update power estimator with signed forward acceleration */
       float out_w = 0.0f;
       imu_power_update(&power, &cal, &acce, stroke.phase, dt_s, &out_w);
-    }
 
-    /* Send BLE notification at 10 Hz */
-    if (++ble_notify_counter >= ble_notify_every) {
-      ble_notify_counter = 0;
-      send_power_notification((int16_t)power.avg_stroke_power_w);
+      if (stroke_done) {
+        power_reading_t reading = {
+            .power_w = power.avg_stroke_power_w,
+            .stroke_rate_spm = stroke.stroke_rate_spm,
+            .stroke_count = (uint32_t)stroke.stroke_count,
+        };
+        xQueueOverwrite(s_power_queue, &reading);
+      }
     }
 
     vTaskDelay(pdMS_TO_TICKS(IMU_SAMPLE_MS));
@@ -229,6 +339,8 @@ void app_main(void) {
   wifi_log_server_start("PowerMeter", "");
 
 #if USE_IMU_POWER
+  s_settings_queue = xQueueCreate(8, sizeof(settings_msg_t));
+  s_power_queue = xQueueCreate(1, sizeof(power_reading_t));
   wifi_log_server_set_command_cb(on_ws_command);
   /* Initialize I2C and MPU6050 */
   i2c_config_t conf = {
@@ -298,6 +410,7 @@ void app_main(void) {
 
 #if USE_IMU_POWER
   xTaskCreate(power_update_task, "Power Update", 4 * 1024, mpu, 5, NULL);
+  xTaskCreate(ble_notify_task, "BLE Notify", 4 * 1024, NULL, 5, NULL);
 #else
   xTaskCreate(power_update_task, "Power Update", 2 * 1024, NULL, 5, NULL);
 #endif
