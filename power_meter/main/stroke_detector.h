@@ -17,6 +17,10 @@ typedef enum {
 #define STROKE_MIN_DURATION_US 300000 /* 300ms */
 /* Maximum stroke duration (sanity check) */
 #define STROKE_MAX_DURATION_US 3000000 /* 3s */
+/* Maximum number of strokes in the rate smoothing window */
+#define STROKE_RATE_MAX_SMOOTH 8
+/* Default smoothing window size (strokes) */
+#define STROKE_RATE_SMOOTH_DEFAULT 3
 
 typedef struct {
   stroke_phase_t phase;
@@ -25,8 +29,12 @@ typedef struct {
   int64_t recovery_start_us;    /* Time recovery began */
   float peak_accel_g;           /* Peak acceleration during pull */
   float stroke_duration_s;      /* Duration of last complete stroke */
-  float stroke_rate_spm;        /* Strokes per minute (catch-to-catch period) */
+  float stroke_rate_spm;        /* Strokes per minute (smoothed, catch-to-catch) */
   int stroke_count;             /* Total strokes detected */
+  /* Rolling period buffer for stroke rate smoothing */
+  float period_buf[STROKE_RATE_MAX_SMOOTH];
+  int period_buf_idx;           /* Next write position (circular) */
+  int period_buf_count;         /* Number of valid entries */
 } stroke_state_t;
 
 void stroke_detector_init(stroke_state_t* state);
@@ -35,6 +43,10 @@ void stroke_detector_init(stroke_state_t* state);
  * Defaults: STROKE_CATCH_THRESHOLD_G / STROKE_RECOVERY_THRESHOLD_G. */
 void stroke_detector_set_catch_threshold(float catch_g);
 void stroke_detector_set_recovery_threshold(float recovery_g);
+
+/* Set the number of strokes to average for stroke rate (1–STROKE_RATE_MAX_SMOOTH).
+ * Default: STROKE_RATE_SMOOTH_DEFAULT. */
+void stroke_detector_set_smooth_strokes(int n);
 
 /* Feed one acceleration sample (magnitude in g, timestamp in microseconds).
  * Returns 1 if a stroke just completed, 0 otherwise. */

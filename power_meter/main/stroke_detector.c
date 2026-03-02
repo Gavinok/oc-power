@@ -6,12 +6,18 @@
 
 static float s_catch_g = STROKE_CATCH_THRESHOLD_G;
 static float s_recovery_g = STROKE_RECOVERY_THRESHOLD_G;
+static int s_smooth_strokes = STROKE_RATE_SMOOTH_DEFAULT;
 
 void stroke_detector_set_catch_threshold(float catch_g) {
   s_catch_g = catch_g;
 }
 void stroke_detector_set_recovery_threshold(float recovery_g) {
   s_recovery_g = recovery_g;
+}
+void stroke_detector_set_smooth_strokes(int n) {
+  if (n < 1) n = 1;
+  if (n > STROKE_RATE_MAX_SMOOTH) n = STROKE_RATE_MAX_SMOOTH;
+  s_smooth_strokes = n;
 }
 
 void stroke_detector_init(stroke_state_t* state) {
@@ -63,7 +69,19 @@ int stroke_detector_update(stroke_state_t* state, float accel_g, int64_t ts_us) 
           state->stroke_duration_s = duration_us / 1e6f;
           if (state->prev_stroke_start_us > 0) {
             float period_s = (state->stroke_start_us - state->prev_stroke_start_us) / 1e6f;
-            state->stroke_rate_spm = 60.0f / period_s;
+            state->period_buf[state->period_buf_idx] = period_s;
+            state->period_buf_idx = (state->period_buf_idx + 1) % STROKE_RATE_MAX_SMOOTH;
+            if (state->period_buf_count < STROKE_RATE_MAX_SMOOTH) state->period_buf_count++;
+
+            int window = s_smooth_strokes < state->period_buf_count ? s_smooth_strokes
+                                                                     : state->period_buf_count;
+            float sum = 0.0f;
+            for (int i = 0; i < window; i++) {
+              int idx = (state->period_buf_idx - 1 - i + STROKE_RATE_MAX_SMOOTH) %
+                        STROKE_RATE_MAX_SMOOTH;
+              sum += state->period_buf[idx];
+            }
+            state->stroke_rate_spm = 60.0f / (sum / window);
           }
           state->recovery_start_us = ts_us;
           state->stroke_count++;
