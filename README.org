@@ -55,6 +55,25 @@ power_meter/
 
 - =wifi_log_server.c/h= :: Starts a SoftAP, serves an HTML log viewer at =http://192.168.4.1=, and streams all =ESP_LOG*= output to connected browsers over WebSocket.
 
+* Hardware Wiring
+
+Connect the MPU6050 to the ESP32 using I2C:
+
+| MPU6050 Pin | ESP32 Pin | Notes                        |
+|-------------+-----------+------------------------------|
+| VCC         | 3.3V      | Do not use 5V                |
+| GND         | GND       |                              |
+| SDA         | GPIO 21   | =I2C_SDA_PIN= in =main.c=   |
+| SCL         | GPIO 22   | =I2C_SCL_PIN= in =main.c=   |
+| AD0         | GND       | Sets I2C address to 0x68     |
+| INT         | —         | Not used                     |
+
+The I2C bus runs at 400 kHz (fast mode). Both SDA and SCL need pull-up resistors to 3.3V — 4.7 kΩ is typical; many MPU6050 breakout boards include these on-board.
+
+AD0 low (GND) → address =0x68= (=MPU6050_I2C_ADDRESS= default). Tie AD0 high (3.3V) to use =0x69= if you have a conflict, and update =MPU6050_I2C_ADDRESS= in =main.c=.
+
+Mount the sensor on the paddle shaft with one axis aligned along the shaft (the direction of forward paddle travel). Use the =set:axis:= browser command to tell the firmware which axis that is (+X, -X, +Y, -Y, +Z, or -Z).
+
 * Configuration
 
 Power simulation parameters in =main.c=:
