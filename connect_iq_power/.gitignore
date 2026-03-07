@@ -1,0 +1,9 @@
+# Monkey C compiler intermediates and build outputs
+*.mir
+*.prg
+*.prg.debug.xml
+/bin/
+/gen/
+
+# Developer key — keep out of version control
+developer_key
