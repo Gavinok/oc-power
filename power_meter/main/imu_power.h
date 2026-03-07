@@ -16,6 +16,10 @@
 /* Number of samples to average during gravity calibration (~2 seconds at 20Hz) */
 #define CALIBRATION_SAMPLES 40
 
+/* Maximum |dot(gravity, forward)| before orientation is considered invalid.
+ * 0.5 ≈ 30° — rejects face-up / face-down mounting. */
+#define ORIENTATION_MAX_FORWARD_G 0.5f
+
 typedef struct {
   /* Gravity vector captured at calibration (magnitude ~1g, points down) */
   float gravity[3];
@@ -51,6 +55,11 @@ typedef struct {
 /* Run stationary gravity calibration. Hold device still for CALIBRATION_SAMPLES.
  * Logs progress to serial. Must complete before imu_power_update() is called. */
 void imu_calibrate(imu_calibration_t* cal, mpu6050_handle_t mpu);
+
+/* Returns true if the calibrated gravity vector is sufficiently perpendicular
+ * to the forward axis (device is not face-up or face-down).
+ * forward must be a unit vector (same as imu_power_state_t.forward). */
+bool imu_orientation_ok(const imu_calibration_t* cal, const float forward[3]);
 
 void imu_power_init(imu_power_state_t* state);
 

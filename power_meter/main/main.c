@@ -252,6 +252,18 @@ static void ble_notify_task(void* param) {
   vTaskDelete(NULL);
 }
 
+static void calibrate_until_oriented(imu_calibration_t* cal, mpu6050_handle_t mpu,
+                                      const float forward[3]) {
+  do {
+    imu_calibrate(cal, mpu);
+    if (!imu_orientation_ok(cal, forward)) {
+      ESP_LOGW(TAG, "Waiting for correct orientation — retrying in 1 s...");
+      cal->calibrated = false;
+      vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+  } while (!cal->calibrated);
+}
+
 static void power_update_task(void* param) {
   mpu6050_handle_t mpu = (mpu6050_handle_t)param;
   stroke_state_t stroke = {0};
@@ -260,7 +272,7 @@ static void power_update_task(void* param) {
 
   stroke_detector_init(&stroke);
   imu_power_init(&power);
-  imu_calibrate(&cal, mpu);
+  calibrate_until_oriented(&cal, mpu, power.forward);
 
   int64_t last_sample_us = esp_timer_get_time();
   ESP_LOGI(TAG, "IMU power task running at %d Hz", 1000 / IMU_SAMPLE_MS);
@@ -289,7 +301,7 @@ static void power_update_task(void* param) {
           break;
         case SETTING_CALIBRATE:
           ESP_LOGI(TAG, "Recalibrating: hold device still...");
-          imu_calibrate(&cal, mpu);
+          calibrate_until_oriented(&cal, mpu, power.forward);
           break;
         case SETTING_SMOOTH_STROKES:
           stroke.smooth_strokes = msg.i;

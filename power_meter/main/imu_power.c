@@ -86,6 +86,20 @@ void imu_calibrate(imu_calibration_t* cal, mpu6050_handle_t mpu) {
            cal->gravity[1], cal->gravity[2]);
 }
 
+bool imu_orientation_ok(const imu_calibration_t* cal, const float forward[3]) {
+    if (!cal->calibrated) return false;
+    float alignment = dot3(cal->gravity, forward);
+    if (fabsf(alignment) >= ORIENTATION_MAX_FORWARD_G) {
+        ESP_LOGW(TAG,
+            "Bad orientation: gravity=(%.2f,%.2f,%.2f) aligns %.0f%% with forward axis. "
+            "Flip device so the forward axis is horizontal.",
+            cal->gravity[0], cal->gravity[1], cal->gravity[2],
+            fabsf(alignment) * 100.0f);
+        return false;
+    }
+    return true;
+}
+
 void imu_power_init(imu_power_state_t* state) {
   memset(state, 0, sizeof(*state));
   state->mass_kg = TOTAL_MASS_KG;
