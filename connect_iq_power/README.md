@@ -145,3 +145,7 @@ jmtpfs ~/garmin
 cp code/other/power/connect_iq_power/bin/PaddlePower.prg garmin/Internal\ Storage/GARMIN/Apps/
 fusermount -u ~/garmin
 
+## Compile
+```bash
+./monkeyc -d fenix7 -o PaddlePower.prg
+```

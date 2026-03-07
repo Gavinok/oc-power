@@ -8,11 +8,15 @@ class PaddlePowerApp extends Application.AppBase {
 
     // Shared power metrics (read by PaddlePowerView.compute())
     var currentPower  as Lang.Number = 0;
-    var totalPower    as Lang.Long   = 0l;
-    var readingCount  as Lang.Number = 0;
+    var strokeRate    as Lang.Number = 0;
+    var strokeCount   as Lang.Number = 0;
+    var _prevRevs     as Lang.Number = -1;
+    var _prevEvtTime  as Lang.Number = -1;
     // Time-stamped history for a true 3-second rolling average.
     // Each entry is [timestamp_ms as Number, watts as Number].
     var power3sHistory as Lang.Array = [] as Lang.Array;
+    // Raw watts ring buffer for debug bar chart (max 60 entries = ~6 s at 10 Hz)
+    var debugHistory  as Lang.Array = [] as Lang.Array;
     var bleStatus     as Lang.String = "Scanning";
 
     private var _bleDelegate as PowerBleDelegate?;
@@ -56,11 +60,25 @@ class PaddlePowerApp extends Application.AppBase {
         return [new PaddlePowerView()];
     }
 
-    // Called by PowerBleDelegate when a new power reading arrives
+    // Called by PowerBleDelegate when a new crank reading arrives
+    function onCrankReading(cumRevs as Lang.Number, eventTime as Lang.Number) as Void {
+        if (_prevEvtTime < 0) {
+            _prevRevs    = cumRevs;
+            _prevEvtTime = eventTime;
+            return;
+        }
+        var deltaRevs = (cumRevs   - _prevRevs)    & 0xFFFF;
+        var deltaTime = (eventTime - _prevEvtTime) & 0xFFFF;
+        if (deltaRevs > 0 && deltaTime > 0) {
+            strokeRate = (deltaRevs * 60 * 1024) / deltaTime;
+        }
+        if (deltaRevs > 0) { strokeCount += deltaRevs; }
+        _prevRevs    = cumRevs;
+        _prevEvtTime = eventTime;
+    }
+
     function onPowerReading(watts as Lang.Number) as Void {
-        currentPower  = watts;
-        totalPower   += watts;
-        readingCount += 1;
+        currentPower = watts;
 
         // Append timestamped reading, then drop anything older than 3 s
         var now = System.getTimer();
@@ -75,10 +93,10 @@ class PaddlePowerApp extends Application.AppBase {
         if (i > 0) {
             power3sHistory = power3sHistory.slice(i, null);
         }
-    }
-}
 
-// Global convenience accessor (matches Connect IQ idiom)
-function getApp() as PaddlePowerApp {
-    return Application.getApp() as PaddlePowerApp;
+        debugHistory.add(watts);
+        if (debugHistory.size() > 60) {
+            debugHistory = debugHistory.slice(1, null);
+        }
+    }
 }

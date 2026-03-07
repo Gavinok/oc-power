@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
 <iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="3">
-  <iq:application id="a3b4c5d6-e7f8-1234-abcd-ef0123456789"
-                  name="@Strings.AppName"
+  <iq:application id="b4c5d6e7-f8a9-2345-bcde-f01234567891"
+                  name="@Strings.DebugPowerName"
                   launcherIcon="@Drawables.LauncherIcon"
                   type="datafield"
                   minApiLevel="3.2.0"
                   version="1.0.0"
-                  entry="PaddlePowerApp">
+                  entry="DebugPowerApp">
     <iq:products>
       <iq:product id="fenix6"/>
       <iq:product id="fenix7"/>

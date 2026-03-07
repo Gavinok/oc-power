@@ -12,14 +12,14 @@ enum BleState {
 
 class PowerBleDelegate extends BluetoothLowEnergy.BleDelegate {
 
-    private var _app          as PaddlePowerApp;
+    private var _app          as PaddlePowerApp or StrokeRateApp;
     private var _state        as BleState = STATE_SCANNING;
     private var _powerChar    as BluetoothLowEnergy.Characteristic?;
 
     private var _powerServiceUuid as BluetoothLowEnergy.Uuid;
     private var _powerCharUuid    as BluetoothLowEnergy.Uuid;
 
-    function initialize(app as PaddlePowerApp) {
+    function initialize(app as PaddlePowerApp or StrokeRateApp) {
         BleDelegate.initialize();
         _app = app;
         _powerServiceUuid = BluetoothLowEnergy.stringToUuid(
@@ -156,5 +156,12 @@ class PowerBleDelegate extends BluetoothLowEnergy.BleDelegate {
         }
 
         _app.onPowerReading(raw);
+
+        // Crank revolution data — always present (flag 0x0020 always set by ESP32)
+        if (value.size() >= 8) {
+            var cumRevs = ((value[5] & 0xFF) << 8) | (value[4] & 0xFF);
+            var evtTime = ((value[7] & 0xFF) << 8) | (value[6] & 0xFF);
+            _app.onCrankReading(cumRevs, evtTime);
+        }
     }
 }
