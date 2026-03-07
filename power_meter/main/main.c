@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <stdatomic.h>
+
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -109,6 +111,12 @@ typedef struct {
 
 static QueueHandle_t s_settings_queue;
 static QueueHandle_t s_power_queue;
+
+/* Seconds of no stroke before BLE output zeros out. 0 = never zero.
+ * Written by the WebSocket task, read by the BLE task at ~1 Hz.
+ * _Atomic with memory_order_relaxed: we need atomicity but not ordering —
+ * the BLE task just needs to eventually see the new value within ~1 s. */
+static _Atomic float s_power_timeout_s = 5.0f;
 
 static void enqueue_setting(const settings_msg_t* msg) {
   if (xQueueSend(s_settings_queue, msg, pdMS_TO_TICKS(10)) != pdTRUE) {
@@ -211,16 +219,35 @@ static void on_ws_command(const char* cmd) {
       enqueue_setting(&msg);
       ESP_LOGI(TAG, "Stroke rate smoothing window set to %d strokes", n);
     }
+
+  } else if (strncmp(cmd, "set:timeout:", 12) == 0) {
+    float s;
+    if (sscanf(cmd + 12, "%f", &s) == 1) {
+      if (s < 0.0f)
+        s = 0.0f;
+      if (s > 30.0f)
+        s = 30.0f;
+      atomic_store_explicit(&s_power_timeout_s, s, memory_order_relaxed);
+      ESP_LOGI(TAG, "Power zero timeout set to %.0f s (0=disabled)", s);
+    }
   }
 }
 
 static void ble_notify_task(void* param) {
   power_reading_t reading = {0};
+  int64_t last_stroke_us = 0;
   ESP_LOGI(TAG, "BLE notify task running (1 Hz keepalive)");
   while (1) {
-    /* Block up to 1s for a new stroke reading; on timeout send last known value */
-    xQueueReceive(s_power_queue, &reading, pdMS_TO_TICKS(1000));
-    send_power_notification((int16_t)reading.power_w);
+    bool new_stroke = xQueueReceive(s_power_queue, &reading, pdMS_TO_TICKS(1000)) == pdTRUE;
+    if (new_stroke) {
+      last_stroke_us = esp_timer_get_time();
+    }
+
+    float timeout_s = atomic_load_explicit(&s_power_timeout_s, memory_order_relaxed);
+    bool timed_out = (timeout_s > 0.0f) && (last_stroke_us > 0) &&
+                     ((esp_timer_get_time() - last_stroke_us) >= (int64_t)(timeout_s * 1e6f));
+
+    send_power_notification(timed_out ? 0 : (int16_t)reading.power_w);
   }
   vTaskDelete(NULL);
 }

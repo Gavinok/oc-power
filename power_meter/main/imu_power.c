@@ -147,7 +147,21 @@ void imu_power_update(imu_power_state_t* state,
     state->stroke_dt_s += dt_s;
   }
 
-  /* Compute power once at PULL->RELEASE transition */
+  /* Compute power once at PULL->RELEASE transition.
+   *
+   * Approximates average stroke power as kinetic energy gained divided by
+   * stroke duration:
+   *
+   *   $P = \frac{\Delta KE}{\Delta t} = \frac{\frac{1}{2} m \Delta v^2}{\Delta t}$
+   *
+   * where:
+   *   $\Delta v = \int_{t_{catch}}^{t_{release}} a_{forward} \, dt$  (m/s)
+   *   $\Delta t$ = duration of CATCH + PULL phases             (s)
+   *   $m$        = total moving mass (paddler + boat + gear)   (kg)
+   *
+   * Note: this omits the $m v_i \Delta v$ term (where $v_i$ is boat speed at
+   * catch) which dominates at cruising speed. GPS fusion (Phase 10) adds this
+   * correction via a running $\hat{v}$ estimate. */
   bool stroke_ending =
       (stroke_phase == STROKE_PHASE_RELEASE && state->prev_phase != STROKE_PHASE_RELEASE);
   if (stroke_ending && state->stroke_dt_s > 0.0f) {
