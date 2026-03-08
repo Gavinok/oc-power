@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Launch a .prg in the Connect IQ simulator.
+# Usage: ./monkeydo <file.prg> <device>
+# Example: ./monkeydo PaddlePower.prg fenix7
+set -euo pipefail
+
+SDK=/home/gavinok/.Garmin/ConnectIQ/Sdks/connectiq-sdk-lin-8.4.1-2026-02-03-e9f77eeaa
+exec "$SDK/bin/monkeydo" "$@"

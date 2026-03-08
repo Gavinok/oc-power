@@ -12,14 +12,14 @@ enum BleState {
 
 class PowerBleDelegate extends BluetoothLowEnergy.BleDelegate {
 
-    private var _app          as PaddlePowerApp or StrokeRateApp;
+    private var _app          as PaddlePowerApp;
     private var _state        as BleState = STATE_SCANNING;
     private var _powerChar    as BluetoothLowEnergy.Characteristic?;
 
     private var _powerServiceUuid as BluetoothLowEnergy.Uuid;
     private var _powerCharUuid    as BluetoothLowEnergy.Uuid;
 
-    function initialize(app as PaddlePowerApp or StrokeRateApp) {
+    function initialize(app as PaddlePowerApp) {
         BleDelegate.initialize();
         _app = app;
         _powerServiceUuid = BluetoothLowEnergy.stringToUuid(

@@ -2,7 +2,7 @@
 *.mir
 *.prg
 *.prg.debug.xml
-/bin/
+bin/
 /gen/
 
 # Developer key — keep out of version control

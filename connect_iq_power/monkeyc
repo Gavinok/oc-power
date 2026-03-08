@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Wrapper around the Connect IQ monkeyc compiler.
 # Usage:
-#   ./monkeyc [extra monkeyc args]               — build PaddlePower (power field)
-#   ./monkeyc --stroke-rate [extra monkeyc args]  — build StrokeRate field
+#   ./monkeyc [extra monkeyc args]        — build PaddlePower
+#   ./monkeyc --debug [extra monkeyc args] — build DebugPower
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -10,10 +10,7 @@ SDK=/home/gavinok/.Garmin/ConnectIQ/Sdks/connectiq-sdk-lin-8.4.1-2026-02-03-e9f7
 KEY="$SCRIPT_DIR/developer_key"
 
 JUNGLE="$SCRIPT_DIR/monkey.jungle"
-if [[ "${1:-}" == "--stroke-rate" ]]; then
-    JUNGLE="$SCRIPT_DIR/stroke_rate.jungle"
-    shift
-elif [[ "${1:-}" == "--debug" ]]; then
+if [[ "${1:-}" == "--debug" ]]; then
     JUNGLE="$SCRIPT_DIR/debug.jungle"
     shift
 fi
